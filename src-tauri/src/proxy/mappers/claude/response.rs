@@ -4,6 +4,28 @@
 use super::models::*;
 use super::utils::to_claude_usage;
 
+/// [FIX #547] Helper function to coerce string values to boolean
+/// Gemini sometimes sends boolean parameters as strings (e.g., "true", "-n", "false")
+fn coerce_to_bool(value: &serde_json::Value) -> Option<serde_json::Value> {
+    match value {
+        serde_json::Value::Bool(_) => Some(value.clone()), // Already boolean
+        serde_json::Value::String(s) => {
+            let lower = s.to_lowercase();
+            if lower == "true" || lower == "yes" || lower == "1" || lower == "-n" {
+                Some(serde_json::json!(true))
+            } else if lower == "false" || lower == "no" || lower == "0" {
+                Some(serde_json::json!(false))
+            } else {
+                None // Unknown string, can't coerce
+            }
+        }
+        serde_json::Value::Number(n) => {
+            Some(serde_json::json!(n.as_i64().map(|i| i != 0).unwrap_or(false)))
+        }
+        _ => None,
+    }
+}
+
 /// Known parameter remappings for Gemini → Claude compatibility
 /// [FIX] Gemini sometimes uses different parameter names than specified in tool schema
 fn remap_function_call_args(tool_name: &str, args: &mut serde_json::Value) {
@@ -16,6 +38,14 @@ fn remap_function_call_args(tool_name: &str, args: &mut serde_json::Value) {
         // [IMPROVED] Case-insensitive matching for tool names
         match tool_name.to_lowercase().as_str() {
             "grep" => {
+                // [FIX #546] Gemini hallucination: maps parameter description to "description" field
+                if let Some(desc) = obj.remove("description") {
+                    if !obj.contains_key("pattern") {
+                        obj.insert("pattern".to_string(), desc);
+                        tracing::debug!("[Response] Remapped Grep: description → pattern");
+                    }
+                }
+
                 // Gemini uses "query", Claude Code expects "pattern"
                 if let Some(query) = obj.remove("query") {
                     if !obj.contains_key("pattern") {
@@ -44,8 +74,72 @@ fn remap_function_call_args(tool_name: &str, args: &mut serde_json::Value) {
                         tracing::debug!("[Response] Remapped Grep: default path → \".\"");
                     }
                 }
+
+                // [FIX] Remap "includes" (array) -> "include" (string)
+                if let Some(includes) = obj.remove("includes") {
+                    if !obj.contains_key("include") {
+                        let include_str = if let Some(arr) = includes.as_array() {
+                            // Join with comma? Or take first? Claude Code expects a single glob string.
+                            // Trying comma separation which is common for multi-glob
+                             arr.iter()
+                                .filter_map(|v| v.as_str())
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        } else if let Some(s) = includes.as_str() {
+                            s.to_string()
+                        } else {
+                            String::new()
+                        };
+                        
+                        if !include_str.is_empty() {
+                            obj.insert("include".to_string(), serde_json::json!(include_str));
+                            tracing::debug!("[Response] Remapped Grep: includes → include(\"{}\")", include_str);
+                        }
+                    }
+                }
+
+                // [FIX] Remap "ignore_case" -> "ignoreCase"
+                if let Some(ignore_case) = obj.remove("ignore_case") {
+                    if !obj.contains_key("ignoreCase") {
+                        obj.insert("ignoreCase".to_string(), ignore_case);
+                        tracing::debug!("[Response] Remapped Grep: ignore_case → ignoreCase");
+                    }
+                }
+
+                // [FIX #547] Handle "-n" parameter sent as string instead of boolean
+                // Gemini sometimes sends Unix-style flags as parameter names
+                if let Some(n_val) = obj.remove("-n") {
+                    if let Some(bool_val) = coerce_to_bool(&n_val) {
+                        // "-n" in grep usually means "line numbers" - map to appropriate param
+                        if !obj.contains_key("lineNumbers") {
+                            obj.insert("lineNumbers".to_string(), bool_val);
+                            tracing::debug!("[Response] Remapped Grep: -n → lineNumbers");
+                        }
+                    }
+                }
+
+                // [FIX #547] Coerce all known boolean parameters from string to bool
+                let bool_params = ["ignoreCase", "lineNumbers", "caseSensitive", "regex", "wholeWord"];
+                for param in bool_params {
+                    if let Some(val) = obj.get(param).cloned() {
+                        if val.is_string() {
+                            if let Some(bool_val) = coerce_to_bool(&val) {
+                                obj.insert(param.to_string(), bool_val);
+                                tracing::debug!("[Response] Coerced Grep param '{}' from string to bool", param);
+                            }
+                        }
+                    }
+                }
             }
             "glob" => {
+                // [FIX #546] Gemini hallucination: maps parameter description to "description" field
+                if let Some(desc) = obj.remove("description") {
+                    if !obj.contains_key("pattern") {
+                        obj.insert("pattern".to_string(), desc);
+                        tracing::debug!("[Response] Remapped Glob: description → pattern");
+                    }
+                }
+
                 // Gemini uses "query", Claude Code expects "pattern"
                 if let Some(query) = obj.remove("query") {
                     if !obj.contains_key("pattern") {

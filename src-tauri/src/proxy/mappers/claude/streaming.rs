@@ -8,6 +8,28 @@ use crate::proxy::SignatureCache;
 use bytes::Bytes;
 use serde_json::json;
 
+/// [FIX #547] Helper function to coerce string values to boolean
+/// Gemini sometimes sends boolean parameters as strings (e.g., "true", "-n", "false")
+fn coerce_to_bool(value: &serde_json::Value) -> Option<serde_json::Value> {
+    match value {
+        serde_json::Value::Bool(_) => Some(value.clone()), // Already boolean
+        serde_json::Value::String(s) => {
+            let lower = s.to_lowercase();
+            if lower == "true" || lower == "yes" || lower == "1" || lower == "-n" {
+                Some(json!(true))
+            } else if lower == "false" || lower == "no" || lower == "0" {
+                Some(json!(false))
+            } else {
+                None // Unknown string, can't coerce
+            }
+        }
+        serde_json::Value::Number(n) => {
+            Some(json!(n.as_i64().map(|i| i != 0).unwrap_or(false)))
+        }
+        _ => None,
+    }
+}
+
 /// Known parameter remappings for Gemini → Claude compatibility
 /// [FIX] Gemini sometimes uses different parameter names than specified in tool schema
 fn remap_function_call_args(tool_name: &str, args: &mut serde_json::Value) {
@@ -20,6 +42,14 @@ fn remap_function_call_args(tool_name: &str, args: &mut serde_json::Value) {
         // [IMPROVED] Case-insensitive matching for tool names
         match tool_name.to_lowercase().as_str() {
             "grep" => {
+                // [FIX #546] Gemini hallucination: maps parameter description to "description" field
+                if let Some(desc) = obj.remove("description") {
+                    if !obj.contains_key("pattern") {
+                        obj.insert("pattern".to_string(), desc);
+                        tracing::debug!("[Streaming] Remapped Grep: description → pattern");
+                    }
+                }
+
                 // Gemini uses "query", Claude Code expects "pattern"
                 if let Some(query) = obj.remove("query") {
                     if !obj.contains_key("pattern") {
@@ -52,8 +82,41 @@ fn remap_function_call_args(tool_name: &str, args: &mut serde_json::Value) {
                         tracing::debug!("[Streaming] Remapped Grep: default path → \".\"");
                     }
                 }
+
+                // [FIX #547] Handle "-n" parameter sent as string instead of boolean
+                // Gemini sometimes sends Unix-style flags as parameter names
+                if let Some(n_val) = obj.remove("-n") {
+                    if let Some(bool_val) = coerce_to_bool(&n_val) {
+                        // "-n" in grep usually means "line numbers" - map to appropriate param
+                        if !obj.contains_key("lineNumbers") {
+                            obj.insert("lineNumbers".to_string(), bool_val);
+                            tracing::debug!("[Streaming] Remapped Grep: -n → lineNumbers");
+                        }
+                    }
+                }
+
+                // [FIX #547] Coerce all known boolean parameters from string to bool
+                let bool_params = ["ignoreCase", "lineNumbers", "caseSensitive", "regex", "wholeWord"];
+                for param in bool_params {
+                    if let Some(val) = obj.get(param).cloned() {
+                        if val.is_string() {
+                            if let Some(bool_val) = coerce_to_bool(&val) {
+                                obj.insert(param.to_string(), bool_val);
+                                tracing::debug!("[Streaming] Coerced Grep param '{}' from string to bool", param);
+                            }
+                        }
+                    }
+                }
             }
             "glob" => {
+                // [FIX #546] Gemini hallucination: maps parameter description to "description" field
+                if let Some(desc) = obj.remove("description") {
+                    if !obj.contains_key("pattern") {
+                        obj.insert("pattern".to_string(), desc);
+                        tracing::debug!("[Streaming] Remapped Glob: description → pattern");
+                    }
+                }
+
                 // Gemini uses "query", Claude Code expects "pattern"
                 if let Some(query) = obj.remove("query") {
                     if !obj.contains_key("pattern") {
