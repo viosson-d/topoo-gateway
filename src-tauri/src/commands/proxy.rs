@@ -736,7 +736,7 @@ pub async fn force_cleanup_ports() -> Result<bool, String> {
     // 1. Get configured port
     let config = crate::modules::config::load_app_config()
         .map_err(|e| format!("Failed to load config: {}", e))?;
-    let port = config.proxy.port.unwrap_or(10086);
+    let port = config.proxy.port;
     
     crate::modules::logger::log_info(&format!("Targeting port: {}", port));
 

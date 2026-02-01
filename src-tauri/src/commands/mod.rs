@@ -848,9 +848,4 @@ pub async fn get_token_stats_account_trend_daily(days: i64) -> Result<Vec<crate:
     crate::modules::token_stats::get_account_trend_daily(days)
 }
 
-#[tauri::command]
-pub async fn reset_forbidden_accounts() -> Result<(), String> {
-    // TODO: Restore actual implementation
-    tracing::info!("Stub: reset_forbidden_accounts called");
-    Ok(())
-}
+

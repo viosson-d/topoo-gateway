@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "antigravity_tools"
-version = "4.0.10"
+version = "0.0.125"
 dependencies = [
  "anyhow",
  "arc-swap",

@@ -388,6 +388,7 @@ pub fn restore_backup(storage_path: &Path, use_oldest: bool) -> Result<PathBuf, 
 }
 
 /// Generate a new set of device fingerprints (Cursor/VSCode style)
+pub fn generate_profile() -> DeviceProfile {
     DeviceProfile {
         machine_id: random_hex(64),
         mac_machine_id: new_standard_machine_id(),
