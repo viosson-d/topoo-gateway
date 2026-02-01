@@ -275,6 +275,33 @@ pub fn delete_account(account_id: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// 重置所有账号的 forbidden 标记
+pub fn reset_all_forbidden_flags() -> Result<usize, String> {
+    let accounts = list_accounts()?;
+    let mut count = 0;
+    
+    for mut account in accounts {
+        let mut changed = false;
+        if let Some(ref mut quota) = account.quota {
+            if quota.is_forbidden {
+                quota.is_forbidden = false;
+                changed = true;
+            }
+        }
+        
+        if changed {
+            if let Err(e) = save_account(&account) {
+                crate::modules::logger::log_error(&format!("Failed to reset forbidden flag for {}: {}", account.email, e));
+            } else {
+                count += 1;
+            }
+        }
+    }
+    
+    crate::modules::logger::log_info(&format!("Reset forbidden flags for {} accounts", count));
+    Ok(count)
+}
+
 /// Batch delete accounts (atomic index operation)
 pub fn delete_accounts(account_ids: &[String]) -> Result<(), String> {
     let _lock = ACCOUNT_INDEX_LOCK.lock().map_err(|e| format!("failed_to_acquire_lock: {}", e))?;

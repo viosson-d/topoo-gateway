@@ -446,7 +446,7 @@ export function SettingsDialog() {
         <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-col items-center justify-center pt-2 pb-0 opacity-30 hover:opacity-100 transition-all duration-500">
                 <img src="/topoo_text_gray.png" alt="Topoo Gateway" className="h-10 w-auto" />
-                <span className="text-[10px] font-sans text-muted-foreground/40 mt-0">v0.0.0.111</span>
+                <span className="text-[10px] font-sans text-muted-foreground/40 mt-0">v0.0.125</span>
             </div>
             <SettingsCard title="Application" description="App information and updates">
                 <div className="flex items-center gap-3 py-1 px-2">

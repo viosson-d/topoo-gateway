@@ -1,16 +1,20 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Topoo Gateway",
-  "version": "0.0.124",
+  "version": "0.0.125",
   "identifier": "com.viosson.topoo.gateway",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1421",
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "topoo-gateway",
+    "version": "0.0.125"
   },
   "app": {
-    "withGlobalTauri": false,
     "windows": [
       {
         "title": "Topoo Gateway",
@@ -42,7 +46,7 @@
   },
   "plugins": {
     "updater": {
-      "active": false,
+      "active": true,
       "endpoints": [
         "https://github.com/viosson-d/P16-Topoo-Gateway/releases/latest/download/updater.json"
       ],

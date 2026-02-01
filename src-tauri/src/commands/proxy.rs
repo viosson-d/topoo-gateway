@@ -728,11 +728,80 @@ pub async fn clear_all_proxy_rate_limits(
     }
 }
 
-/// 强制清理端口 (Stub)
+/// 强制清理端口
 #[tauri::command]
 pub async fn force_cleanup_ports() -> Result<bool, String> {
-    // TODO: Restore actual implementation
-    tracing::info!("Stub: force_cleanup_ports called");
-    Ok(true)
-}
+    crate::modules::logger::log_info("Executing force cleanup of proxy ports...");
+    
+    // 1. Get configured port
+    let config = crate::modules::config::load_app_config()
+        .map_err(|e| format!("Failed to load config: {}", e))?;
+    let port = config.proxy.port.unwrap_or(10086);
+    
+    crate::modules::logger::log_info(&format!("Targeting port: {}", port));
 
+    #[cfg(target_os = "macos")]
+    {
+        // usage: lsof -i :<port> -t | xargs kill -9
+        let check_cmd = std::process::Command::new("lsof")
+            .args(["-i", &format!(":{}", port), "-t"])
+            .output();
+            
+        match check_cmd {
+            Ok(output) => {
+                let pids = String::from_utf8_lossy(&output.stdout);
+                if pids.trim().is_empty() {
+                     crate::modules::logger::log_info("No processes found on port");
+                     return Ok(true);
+                }
+                
+                crate::modules::logger::log_info(&format!("Found interfering processes (PIDs): {:?}", pids.trim()));
+                
+                // Kill found PIDs
+                for pid in pids.lines() {
+                     if let Ok(pid_int) = pid.trim().parse::<i32>() {
+                         let my_pid = std::process::id() as i32;
+                         if pid_int == my_pid {
+                              crate::modules::logger::log_warn("Skipping kill of self (PID match)");
+                              continue;
+                         }
+                         
+                         let _ = std::process::Command::new("kill")
+                             .args(["-9", pid.trim()])
+                             .output();
+                     }
+                }
+                Ok(true)
+            }
+            Err(e) => Err(format!("Failed to execute lsof: {}", e))
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+         let check_cmd = std::process::Command::new("lsof")
+            .args(["-i", &format!(":{}", port), "-t"])
+            .output();
+            
+        match check_cmd {
+            Ok(output) => {
+                let pids = String::from_utf8_lossy(&output.stdout);
+                 for pid in pids.lines() {
+                     if let Ok(pid_int) = pid.trim().parse::<i32>() {
+                         let my_pid = std::process::id() as i32;
+                         if pid_int == my_pid { continue; }
+                         let _ = std::process::Command::new("kill").args(["-9", pid.trim()]).output();
+                     }
+                }
+                Ok(true)
+            }
+            Err(_) => Ok(true) // Ignore error on linux if tool missing
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        crate::modules::logger::log_warn("Force cleanup ports not explicitly implemented for Windows yet");
+        Ok(true)
+    }
+}

@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Clock, Bot, User } from "lucide-react"; // Using basic icons for avatars if images not provided
 import { format } from "date-fns";
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
-import { useTranslation } from 'react-i18next'; // Added import
+import { useTranslation } from 'react-i18next';
+import { ChatInput } from "./ChatInput";
 
 type TabType = 'turn' | 'session' | 'events' | 'docs';
 
@@ -69,6 +70,10 @@ export function RecentActivity() {
                     </div>
                 )}
             </div>
+
+            {activeTab === 'turn' && (
+                <ChatInput />
+            )}
         </div>
     );
 }

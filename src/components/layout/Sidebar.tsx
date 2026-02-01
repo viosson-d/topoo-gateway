@@ -41,7 +41,7 @@ export function Sidebar({ className }: { className?: string }) {
                         </div>
                         <div className="min-w-0 flex flex-col justify-center">
                             <h2 className="font-semibold text-sm leading-none text-foreground tracking-tight force-no-transform" style={{ textTransform: 'none' }}>topoo</h2>
-                            <p className="text-[11px] text-muted-foreground/80 leading-tight mt-0.5">Gateway <span className="text-muted-foreground/50 text-[10px]">v0.0.0.111</span></p>
+                            <p className="text-[11px] text-muted-foreground/80 leading-tight mt-0.5">Gateway <span className="text-muted-foreground/50 text-[10px]">v0.0.125</span></p>
                         </div>
                     </div>
                 </div>

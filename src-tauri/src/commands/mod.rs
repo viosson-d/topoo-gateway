@@ -797,6 +797,12 @@ pub async fn get_token_stats_hourly(hours: i64) -> Result<Vec<TokenStatsAggregat
     crate::modules::token_stats::get_hourly_stats(hours)
 }
 
+/// 重置所有账号的 forbidden 状态
+#[tauri::command]
+pub async fn reset_forbidden_accounts() -> Result<usize, String> {
+    modules::account::reset_all_forbidden_flags()
+}
+
 #[tauri::command]
 pub async fn get_token_stats_daily(days: i64) -> Result<Vec<TokenStatsAggregated>, String> {
     crate::modules::token_stats::get_daily_stats(days)
