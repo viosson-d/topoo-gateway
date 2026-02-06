@@ -19,7 +19,10 @@ fn get_antigravity_path() -> Option<PathBuf> {
 pub fn get_db_path() -> Result<PathBuf, String> {
     // Prefer path specified by --user-data-dir argument
     if let Some(user_data_dir) = crate::modules::process::get_user_data_dir_from_process() {
-        let custom_db_path = user_data_dir.join("User").join("globalStorage").join("state.vscdb");
+        let custom_db_path = user_data_dir
+            .join("User")
+            .join("globalStorage")
+            .join("state.vscdb");
         if custom_db_path.exists() {
             return Ok(custom_db_path);
         }
@@ -42,29 +45,42 @@ pub fn get_db_path() -> Result<PathBuf, String> {
     }
 
     // Standard mode: use system default path
+    let target_app = crate::modules::config::load_app_config()
+        .map(|c| c.target_app_name)
+        .unwrap_or_else(|_| "Antigravity".to_string());
+
     #[cfg(target_os = "macos")]
     {
         let home = dirs::home_dir().ok_or("Failed to get home directory")?;
-        Ok(home.join("Library/Application Support/Antigravity/User/globalStorage/state.vscdb"))
+        Ok(home.join(format!(
+            "Library/Application Support/{}/User/globalStorage/state.vscdb",
+            target_app
+        )))
     }
 
     #[cfg(target_os = "windows")]
     {
-        let appdata =
-            std::env::var("APPDATA").map_err(|_| "Failed to get APPDATA environment variable".to_string())?;
-        Ok(PathBuf::from(appdata).join("Antigravity\\User\\globalStorage\\state.vscdb"))
+        let appdata = std::env::var("APPDATA")
+            .map_err(|_| "Failed to get APPDATA environment variable".to_string())?;
+        Ok(
+            PathBuf::from(appdata)
+                .join(format!("{}\\User\\globalStorage\\state.vscdb", target_app)),
+        )
     }
 
     #[cfg(target_os = "linux")]
     {
         let home = dirs::home_dir().ok_or("Failed to get home directory")?;
-        Ok(home.join(".config/Antigravity/User/globalStorage/state.vscdb"))
+        Ok(home.join(format!(
+            ".config/{}/User/globalStorage/state.vscdb",
+            target_app
+        )))
     }
 }
 
 /// Inject Token and Email into database
 pub fn inject_token(
-    db_path: &PathBuf,
+    db_path: &std::path::PathBuf,
     access_token: &str,
     refresh_token: &str,
     expiry: i64,
@@ -73,7 +89,10 @@ pub fn inject_token(
     // 1. Open database
     let conn = Connection::open(db_path).map_err(|e| format!("Failed to open database: {}", e))?;
 
-    // 2. Read current data
+    // [OPTIMIZATION] Set busy timeout to avoid immediate failure when DB is locked by IDE
+    let _ = conn.execute("PRAGMA busy_timeout = 5000", []);
+
+    // 2. Read current data from Legacy key
     let current_data: String = conn
         .query_row(
             "SELECT value FROM ItemTable WHERE key = ?",
@@ -100,7 +119,7 @@ pub fn inject_token(
     let new_oauth_field = protobuf::create_oauth_field(access_token, refresh_token, expiry);
 
     // 6. Merge data
-    // We intentionally do NOT re-inject Field 1 (UserID) to force the client 
+    // We intentionally do NOT re-inject Field 1 (UserID) to force the client
     // to re-authenticate the session with the new token.
     let final_data = [clean_data, new_email_field, new_oauth_field].concat();
     let final_b64 = general_purpose::STANDARD.encode(&final_data);
@@ -120,5 +139,8 @@ pub fn inject_token(
     )
     .map_err(|e| format!("Failed to write Onboarding flag: {}", e))?;
 
-    Ok(format!("Token and Identity injection successful!\nDatabase: {:?}", db_path))
+    Ok(format!(
+        "Token and Identity injection successful!\nDatabase: {:?}",
+        db_path
+    ))
 }

@@ -157,6 +157,8 @@
         "proxy_disabled_tooltip": "This account has proxy disabled manually, it will not handle API requests but remains usable in the app.",
         "enable_proxy": "Enable Proxy",
         "disable_proxy": "Disable Proxy",
+        "enable_account": "Enable Account",
+        "disable_account_manual": "Manually Disable Account",
         "enable_proxy_selected": "Enable ({{count}})",
         "disable_proxy_selected": "Disable ({{count}})",
         "proxy_disabled_reason_manual": "Disabled manually by user",

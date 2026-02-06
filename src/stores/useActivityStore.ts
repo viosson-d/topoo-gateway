@@ -31,68 +31,193 @@ export interface DailyUsage {
 interface ActivityState {
     turns: CommunicationTurn[]; // Replaces generic 'events'
     usageHistory: DailyUsage[];
+    granularity: 'minute' | 'hour' | 'day';
     loading: boolean;
     error: string | null;
+    setGranularity: (granularity: 'minute' | 'hour' | 'day') => void;
     fetchUsageHistory: () => Promise<void>;
     fetchRecentActivity: () => Promise<void>;
     setupListeners: () => Promise<() => void>;
 }
 
-const mapLogToTurn = (log: any): CommunicationTurn | null => {
-    // Validate required fields roughly to filter out debug events or malformed data
-    if (!log || typeof log !== 'object') return null;
+/**
+ * 将 ProxyRequestLog 转换为 CommunicationTurn
+ * 从请求和响应中提取用户消息和 AI 响应
+ */
+function mapLogToTurn(log: any): CommunicationTurn | null {
+    try {
+        // 基本验证
+        if (!log || !log.id) {
+            console.warn('[mapLogToTurn] Invalid log: missing id');
+            return null;
+        }
 
-    // If it's the simple debug event, skip it or handle differently
-    // The main flow expects a 'timestamp' number
-    if (typeof log.timestamp !== 'number') {
-        // Fallback for debug events or malformed timestamps
-        console.warn('[Store] Invalid or missing timestamp in log, skipping or using fallback:', log);
-        // Ensure we don't crash UI with bad dates.
-        // If we strictly want to ignore events without valid timestamps (like TEST-SIMPLE):
-        if (!log.timestamp) return null;
-    }
+        console.log('[mapLogToTurn] Processing log:', {
+            id: log.id,
+            hasRequestBody: !!log.request_body,
+            hasResponseBody: !!log.response_body,
+            hasError: !!log.error,
+            status: log.status
+        });
 
-    const safeTimestamp = (typeof log.timestamp === 'number' && !isNaN(log.timestamp))
-        ? log.timestamp
-        : Date.now();
+        const nodes: MessageNode[] = [];
 
-    return {
-        id: log.id || `unknown-${Date.now()}`,
-        nodes: [
-            {
-                id: `${log.id}-req`,
-                role: 'engineer',
-                name: 'Engineer',
-                status: 'success',
-                timestamp: safeTimestamp,
-                channel: log.protocol || 'openai',
-                content: log.url || 'Unknown Request'
-            },
-            {
-                id: `${log.id}-res`,
-                role: 'agent',
-                name: log.mapped_model || log.model || 'Agent',
-                status: (log.status || 200) < 400 ? 'success' : 'error',
-                timestamp: safeTimestamp + (log.duration || 0),
-                channel: log.protocol || 'openai',
-                content: log.error || `Status: ${log.status || 0}, Duration: ${log.duration || 0}ms`
+        // 提取用户请求内容
+        let userContent = '';
+        if (log.request_body) {
+            try {
+                const reqBody = typeof log.request_body === 'string'
+                    ? JSON.parse(log.request_body)
+                    : log.request_body;
+
+                console.log('[mapLogToTurn] Parsed request_body:', reqBody);
+
+                // 支持 OpenAI 和 Anthropic 格式
+                if (reqBody.messages && Array.isArray(reqBody.messages)) {
+                    const lastUserMsg = reqBody.messages
+                        .filter((m: any) => m.role === 'user')
+                        .pop();
+
+                    if (lastUserMsg) {
+                        if (typeof lastUserMsg.content === 'string') {
+                            userContent = lastUserMsg.content;
+                        } else if (Array.isArray(lastUserMsg.content)) {
+                            // 处理多模态内容
+                            userContent = lastUserMsg.content
+                                .filter((c: any) => c.type === 'text')
+                                .map((c: any) => c.text)
+                                .join(' ');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('[mapLogToTurn] Failed to parse request_body:', e, log.request_body);
             }
-        ]
-    };
-};
+        }
+
+        // 添加用户节点
+        if (userContent) {
+            nodes.push({
+                id: `${log.id}-user`,
+                role: 'engineer',
+                name: log.account_email || 'User',
+                status: 'success',
+                timestamp: log.timestamp,
+                channel: log.protocol || 'api',
+                content: userContent.length > 200 ? userContent.substring(0, 200) + '...' : userContent
+            });
+        }
+
+        // 提取 AI 响应内容
+        let assistantContent = '';
+        if (log.response_body) {
+            try {
+                const resBody = typeof log.response_body === 'string'
+                    ? JSON.parse(log.response_body)
+                    : log.response_body;
+
+                console.log('[mapLogToTurn] Parsed response_body:', resBody);
+
+                // OpenAI 格式
+                if (resBody.choices && Array.isArray(resBody.choices) && resBody.choices.length > 0) {
+                    const choice = resBody.choices[0];
+                    if (choice.message && choice.message.content) {
+                        assistantContent = choice.message.content;
+                    } else if (choice.delta && choice.delta.content) {
+                        assistantContent = choice.delta.content;
+                    }
+                }
+                // Anthropic 格式
+                else if (resBody.content && Array.isArray(resBody.content)) {
+                    assistantContent = resBody.content
+                        .filter((c: any) => c.type === 'text')
+                        .map((c: any) => c.text)
+                        .join(' ');
+                }
+            } catch (e) {
+                console.error('[mapLogToTurn] Failed to parse response_body:', e, log.response_body);
+            }
+        }
+
+        // 处理错误信息 - 只显示简短的错误摘要
+        let errorSummary = '';
+        if (log.error) {
+            try {
+                // 如果 error 是 JSON 字符串,尝试解析并提取关键信息
+                const errorObj = typeof log.error === 'string' ? JSON.parse(log.error) : log.error;
+                if (errorObj.error && errorObj.error.message) {
+                    errorSummary = errorObj.error.message;
+                } else if (errorObj.message) {
+                    errorSummary = errorObj.message;
+                } else {
+                    errorSummary = String(log.error).substring(0, 100);
+                }
+            } catch {
+                // 如果不是 JSON,直接截取前100个字符
+                errorSummary = String(log.error).substring(0, 100);
+            }
+        }
+
+        // 添加 AI 节点
+        const modelName = log.mapped_model || log.model || 'AI';
+        nodes.push({
+            id: `${log.id}-assistant`,
+            role: 'agent',
+            name: modelName,
+            status: log.status >= 200 && log.status < 300 ? 'success' : 'error',
+            timestamp: log.timestamp + (log.duration || 0),
+            channel: log.protocol || 'api',
+            content: assistantContent
+                ? (assistantContent.length > 200 ? assistantContent.substring(0, 200) + '...' : assistantContent)
+                : (errorSummary || 'No response')
+        });
+
+        console.log('[mapLogToTurn] Created nodes:', nodes);
+
+        // 如果没有任何有效节点,返回 null
+        if (nodes.length === 0) {
+            return null;
+        }
+
+        return {
+            id: log.id,
+            nodes
+        };
+    } catch (error) {
+        console.error('[mapLogToTurn] Error mapping log:', error, log);
+        return null;
+    }
+}
 
 export const useActivityStore = create<ActivityState>()(
     (set, get) => ({
         turns: [],
         usageHistory: [],
+        granularity: 'day', // Default to day
         loading: false,
         error: null,
+
+        setGranularity: (granularity) => {
+            set({ granularity });
+            get().fetchUsageHistory();
+        },
 
         fetchUsageHistory: async () => {
             set({ loading: true, error: null });
             try {
-                // Fetch last 14 days of model trend data
-                const trendData: any[] = await invoke('get_token_stats_model_trend_daily', { days: 14 });
+                const { granularity } = get();
+                let trendData: any[] = [];
+
+                if (granularity === 'minute') {
+                    // Fetch last 60 minutes
+                    trendData = await invoke('get_token_stats_model_trend_minute', { minutes: 60 });
+                } else if (granularity === 'hour') {
+                    // Fetch last 24 hours
+                    trendData = await invoke('get_token_stats_model_trend_hourly', { hours: 24 });
+                } else {
+                    // Fetch last 14 days
+                    trendData = await invoke('get_token_stats_model_trend_daily', { days: 14 });
+                }
 
                 const history: DailyUsage[] = trendData.map(point => {
                     // Aggregate all accounts for Claude and Gemini

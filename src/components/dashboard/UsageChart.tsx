@@ -6,13 +6,19 @@ import { useTranslation } from "react-i18next";
 
 export function UsageChart() {
     const { i18n } = useTranslation();
-    const { usageHistory } = useActivityStore();
+    const { usageHistory, granularity, setGranularity } = useActivityStore();
     const [activeTab, setActiveTab] = useState<'tokens' | 'sessions'>('tokens');
 
     const formatDate = (dateStr: string) => {
         try {
             const date = new Date(dateStr);
-            return new Intl.DateTimeFormat(i18n.language, { month: 'short', day: 'numeric' }).format(date);
+            if (granularity === 'minute') {
+                return new Intl.DateTimeFormat(i18n.language, { hour: 'numeric', minute: 'numeric' }).format(date);
+            } else if (granularity === 'hour') {
+                return new Intl.DateTimeFormat(i18n.language, { hour: 'numeric', minute: 'numeric' }).format(date);
+            } else {
+                return new Intl.DateTimeFormat(i18n.language, { month: 'short', day: 'numeric' }).format(date);
+            }
         } catch (e) {
             return dateStr;
         }
@@ -47,7 +53,26 @@ export function UsageChart() {
         <div className="bg-white/50 dark:bg-white/[0.02] border border-codmate-border dark:border-codmate-border-dark rounded-codmate shadow-codmate flex flex-col space-y-4 overflow-hidden">
             {/* Header (Source: headerView in OverviewActivityChart.swift) */}
             <header className="flex items-center justify-between px-4 py-3">
-                <h2 className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug">Activity highlights</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug">Activity highlights</h2>
+                    {/* Granularity Picker */}
+                    <div className="flex bg-zinc-100/50 dark:bg-white/5 p-0.5 rounded-lg border border-black/[0.03]">
+                        {['minute', 'hour', 'day'].map((g) => (
+                            <button
+                                key={g}
+                                onClick={() => setGranularity(g as any)}
+                                className={cn(
+                                    "px-2.5 py-0.5 rounded-[5px] text-[10px] font-medium capitalize transition-all",
+                                    granularity === g
+                                        ? "bg-white dark:bg-zinc-800 text-foreground shadow-sm"
+                                        : "text-muted-foreground/40 hover:text-muted-foreground/60"
+                                )}
+                            >
+                                {g}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
                 <div className="flex items-center gap-4">
                     {/* Metric Picker */}
@@ -108,7 +133,7 @@ export function UsageChart() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
                             <XAxis
-                                dataKey="date"
+                                dataKey="date" // This is actually the bucket string (e.g. "2023-10-27 10:00")
                                 axisLine={false}
                                 tickLine={false}
                                 tick={{ fontSize: 11, fill: 'currentColor', fontWeight: 500 }}

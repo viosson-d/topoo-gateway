@@ -70,7 +70,6 @@ pub fn resolve_request_config(
 
     // [FIX] Map logic aliases back to physical model names for upstream compatibility
     final_model = match final_model.as_str() {
-        "gemini-3-pro-preview" => "gemini-3-pro-high".to_string(), // Preview maps back to High
         "gemini-3-pro-image-preview" => "gemini-3-pro-image".to_string(),
         "gemini-3-flash-preview" => "gemini-3-flash".to_string(),
         _ => final_model,

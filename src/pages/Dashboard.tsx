@@ -122,16 +122,35 @@ function Dashboard() {
             </PageHeader>
 
             <div className="flex flex-col flex-1 min-h-0 gap-4">
-                {/* Error State Display */}
-                {error && (
+                {/* Error State Display: Only show big banner if no accounts are loaded */}
+                {error && accounts.length === 0 && (
                     <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50 rounded-lg p-3 flex items-center gap-3 text-sm text-red-600 dark:text-red-400 shrink-0">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <p className="flex-1 font-medium">Data Load Error: {error}</p>
+                        <div className="flex-1">
+                            <p className="font-medium">{t('dashboard.error.load_failed') || 'Data Load Error'}</p>
+                            <p className="text-xs opacity-80">{error}</p>
+                        </div>
                         <button
                             onClick={() => { fetchAccounts(); fetchCurrentAccount(); }}
                             className="px-3 py-1 rounded-md bg-white dark:bg-black/20 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-xs font-semibold"
                         >
-                            Retry
+                            {t('common.retry') || 'Retry'}
+                        </button>
+                    </div>
+                )}
+
+                {/* Smaller warning for transient errors when data exists */}
+                {error && accounts.length > 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/50 rounded-lg py-2 px-3 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 shrink-0">
+                        <AlertTriangle className="w-3 h-3" />
+                        <p className="flex-1">
+                            {t('dashboard.error.sync_warning') || 'Some data failed to sync, showing cached data.'} ({error})
+                        </p>
+                        <button
+                            onClick={() => { fetchAccounts(); fetchCurrentAccount(); }}
+                            className="hover:underline font-medium"
+                        >
+                            {t('common.retry') || 'Retry'}
                         </button>
                     </div>
                 )}

@@ -157,6 +157,8 @@
         "proxy_disabled_tooltip": "此账号已被手动禁用反代功能,不参与 API 请求,但仍可在应用中使用",
         "enable_proxy": "启用反代",
         "disable_proxy": "禁用反代",
+        "enable_account": "启用账号",
+        "disable_account_manual": "手动禁用账号",
         "enable_proxy_selected": "启用 ({{count}})",
         "disable_proxy_selected": "禁用 ({{count}})",
         "proxy_disabled_reason_manual": "用户手动禁用",

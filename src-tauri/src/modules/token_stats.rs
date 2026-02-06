@@ -427,6 +427,46 @@ pub fn get_model_trend_hourly(hours: i64) -> Result<Vec<ModelTrendPoint>, String
         .collect())
 }
 
+pub fn get_model_trend_minute(minutes: i64) -> Result<Vec<ModelTrendPoint>, String> {
+    let conn = connect_db()?;
+    let cutoff = chrono::Utc::now().timestamp() - (minutes * 60);
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT strftime('%Y-%m-%d %H:%M', datetime(timestamp, 'unixepoch')) as minute_bucket,
+                model,
+                SUM(total_tokens) as total
+         FROM token_usage
+         WHERE timestamp >= ?1
+         GROUP BY minute_bucket, model
+         ORDER BY minute_bucket ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let mut trend_map: std::collections::BTreeMap<String, std::collections::HashMap<String, u64>> =
+        std::collections::BTreeMap::new();
+
+    let rows = stmt
+        .query_map([cutoff], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, u64>(2)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+
+    for row in rows {
+        let (period, model, total) = row.map_err(|e| e.to_string())?;
+        trend_map.entry(period).or_default().insert(model, total);
+    }
+
+    Ok(trend_map
+        .into_iter()
+        .map(|(period, model_data)| ModelTrendPoint { period, model_data })
+        .collect())
+}
+
 pub fn get_model_trend_daily(days: i64) -> Result<Vec<ModelTrendPoint>, String> {
     let conn = connect_db()?;
     let cutoff = chrono::Utc::now().timestamp() - (days * 24 * 3600);

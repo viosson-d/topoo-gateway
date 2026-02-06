@@ -28,6 +28,7 @@ interface AccountState {
     importFromCustomDb: (path: string) => Promise<void>;
     syncAccountFromDb: () => Promise<void>;
     toggleProxyStatus: (accountId: string, enable: boolean, reason?: string) => Promise<void>;
+    toggleAccountDisabled: (accountId: string, disabled: boolean, reason?: string) => Promise<void>;
     warmUpAccounts: () => Promise<string>;
     warmUpAccount: (accountId: string) => Promise<string>;
     resetForbiddenAccounts: () => Promise<accountService.ResetStats>;
@@ -47,16 +48,36 @@ export const useAccountStore = create<AccountState>((set, get) => ({
             set({ accounts, loading: false });
         } catch (error) {
             console.error('[Store] Fetch accounts failed:', error);
-            set({ error: String(error), loading: false });
+            // Don't set global error if we already have accounts (transient failure)
+            const currentAccounts = get().accounts;
+            const errorMsg = `Accounts Load Error: ${error}`;
+            set({
+                error: currentAccounts.length === 0 ? errorMsg : null,
+                loading: false
+            });
+            if (currentAccounts.length > 0) {
+                console.warn('[Store] Using cached accounts due to fetch failure');
+            }
         }
     },
 
     fetchCurrentAccount: async () => {
+        console.log('[Store] fetchCurrentAccount called');
         set({ loading: true, error: null });
         try {
+            console.log('[Store] Calling accountService.getCurrentAccount...');
             const account = await accountService.getCurrentAccount();
+            console.log('[Store] getCurrentAccount returned:', account);
+            console.log('[Store] Account type:', typeof account);
+            console.log('[Store] Account is null:', account === null);
+            if (account) {
+                console.log('[Store] Account email:', account.email);
+                console.log('[Store] Account ID:', account.id);
+            }
             set({ currentAccount: account, loading: false });
+            console.log('[Store] State updated, currentAccount:', account);
         } catch (error) {
+            console.error('[Store] Fetch current account failed:', error);
             set({ error: String(error), loading: false });
         }
     },
@@ -277,6 +298,17 @@ export const useAccountStore = create<AccountState>((set, get) => ({
             await get().fetchCurrentAccount();
         } catch (error) {
             console.error('[AccountStore] Toggle proxy status failed:', error);
+            throw error;
+        }
+    },
+
+    toggleAccountDisabled: async (accountId: string, disabled: boolean, reason?: string) => {
+        try {
+            await accountService.toggleAccountDisabled(accountId, disabled, reason);
+            await get().fetchAccounts();
+            await get().fetchCurrentAccount();
+        } catch (error) {
+            console.error('[AccountStore] Toggle account disabled failed:', error);
             throw error;
         }
     },

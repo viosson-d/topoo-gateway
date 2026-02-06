@@ -12,11 +12,27 @@ function ensureTauriEnvironment() {
 }
 
 export async function listAccounts(): Promise<Account[]> {
-    return await invoke('list_accounts');
+    const response = await invoke<any>('list_accounts');
+    // 兼容两种返回格式:
+    // 1. 直接返回数组: [...]
+    // 2. 返回对象: { accounts: [...] }
+    if (response && typeof response === 'object' && Array.isArray(response.accounts)) {
+        return response.accounts;
+    }
+    return response || [];
 }
 
 export async function getCurrentAccount(): Promise<Account | null> {
-    return await invoke('get_current_account');
+    console.log('[accountService] getCurrentAccount called');
+    try {
+        const result = await invoke('get_current_account');
+        console.log('[accountService] Backend returned:', result);
+        console.log('[accountService] Result type:', typeof result);
+        return result as Account | null;
+    } catch (error) {
+        console.error('[accountService] getCurrentAccount error:', error);
+        throw error;
+    }
 }
 
 export async function addAccount(email: string, refreshToken: string): Promise<Account> {
@@ -109,6 +125,10 @@ export async function syncAccountFromDb(): Promise<Account | null> {
 
 export async function toggleProxyStatus(accountId: string, enable: boolean, reason?: string): Promise<void> {
     return await invoke('toggle_proxy_status', { accountId, enable, reason });
+}
+
+export async function toggleAccountDisabled(accountId: string, disabled: boolean, reason?: string): Promise<Account> {
+    return await invoke('toggle_account_disabled', { accountId, disabled, reason });
 }
 
 /**

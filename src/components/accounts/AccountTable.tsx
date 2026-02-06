@@ -39,6 +39,7 @@ import {
     ToggleLeft,
     ToggleRight,
     Sparkles,
+    MoreHorizontal,
 } from 'lucide-react';
 import { Account } from '../../types/account';
 import { useTranslation } from 'react-i18next';
@@ -65,6 +66,7 @@ interface AccountTableProps {
     onExport: (accountId: string) => void;
     onDelete: (accountId: string) => void;
     onToggleProxy: (accountId: string) => void;
+    onToggleDisabled: (accountId: string, disabled: boolean) => void;
     onWarmup?: (accountId: string) => void;
     /** 拖拽排序回调，当用户完成拖拽时触发 */
     onReorder?: (accountIds: string[]) => void;
@@ -85,6 +87,7 @@ interface SortableRowProps {
     onExport: () => void;
     onDelete: () => void;
     onToggleProxy: () => void;
+    onToggleDisabled: (disabled: boolean) => void;
     onWarmup?: () => void;
 }
 
@@ -100,6 +103,7 @@ interface AccountRowContentProps {
     onExport: () => void;
     onDelete: () => void;
     onToggleProxy: () => void;
+    onToggleDisabled: (disabled: boolean) => void;
     onWarmup?: () => void;
 }
 
@@ -208,6 +212,7 @@ function SortableAccountRow({
     onExport,
     onDelete,
     onToggleProxy,
+    onToggleDisabled,
     onWarmup,
 }: SortableRowProps) {
     const { t } = useTranslation();
@@ -275,6 +280,7 @@ function SortableAccountRow({
                 onExport={onExport}
                 onDelete={onDelete}
                 onToggleProxy={onToggleProxy}
+                onToggleDisabled={onToggleDisabled}
                 onWarmup={onWarmup}
             />
         </tr>
@@ -297,6 +303,7 @@ function AccountRowContent({
     onExport,
     onDelete,
     onToggleProxy,
+    onToggleDisabled,
     onWarmup,
 }: AccountRowContentProps) {
     const { t } = useTranslation();
@@ -313,12 +320,13 @@ function AccountRowContent({
     // 获取要显示的模型列表
     const pinnedModels = config?.pinned_quota_models?.models || Object.keys(MODEL_CONFIG);
     const isDisabled = Boolean(account.disabled);
+    const isProxyDisabled = Boolean(account.proxy_disabled);
 
     return (
         <>
             {/* 邮箱列 */}
             <td className="px-4 py-2.5">
-                <div className="flex items-center gap-3">
+                <div className={cn("flex items-center gap-3", isDisabled && "opacity-60")}>
                     <span className={cn(
                         "font-medium text-sm truncate max-w-[180px] xl:max-w-none transition-colors",
                         isCurrent ? "text-blue-700 dark:text-blue-400" : "text-gray-900 dark:text-base-content"
@@ -450,7 +458,7 @@ function AccountRowContent({
             </td>
 
             {/* 最后使用时间列 */}
-            <td className="px-4 py-2.5">
+            <td className={cn("px-4 py-2.5", isDisabled && "opacity-50")}>
                 <div className="flex flex-col">
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-400 font-mono whitespace-nowrap">
                         {new Date(account.last_used * 1000).toLocaleDateString()}
@@ -467,77 +475,103 @@ function AccountRowContent({
                 isCurrent && "bg-blue-50/80 dark:bg-blue-900/40",
                 !isCurrent && "group-hover:bg-slate-50 dark:group-hover:bg-slate-900/80"
             )}>
-                <div className="flex items-center justify-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center justify-center gap-1.5 group-hover:opacity-100 transition-opacity">
+                    {/* 主要操作按钮 */}
                     <button
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/30 rounded-lg transition-all"
-                        onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
-                        title={t('common.details')}
-                    >
-                        <Info className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
-                        onClick={(e) => { e.stopPropagation(); onViewDevice(); }}
-                        title={t('accounts.device_fingerprint')}
-                    >
-                        <Fingerprint className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                        className={`p-1.5 text-gray-500 dark:text-gray-400 rounded-lg transition-all ${(isSwitching || isDisabled) ? 'bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 cursor-not-allowed' : 'hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30'}`}
+                        className={`btn btn-ghost btn-xs flex items-center gap-1.5 h-8 px-2.5 min-w-[80px] rounded-lg transition-all ${(isSwitching || isDisabled) ? 'bg-blue-50/50 dark:bg-blue-900/10 text-blue-400 dark:text-blue-600 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40'}`}
                         onClick={(e) => { e.stopPropagation(); onSwitch(); }}
                         title={isDisabled ? t('accounts.disabled_tooltip') : (isSwitching ? t('common.loading') : t('accounts.switch_to'))}
                         disabled={isSwitching || isDisabled}
                     >
                         <ArrowRightLeft className={`w-3.5 h-3.5 ${isSwitching ? 'animate-spin' : ''}`} />
+                        <span className="text-[11px] font-medium">{t('accounts.switch_to')}</span>
                     </button>
-                    {onWarmup && (
-                        <button
-                            className={`p-1.5 text-gray-500 dark:text-gray-400 rounded-lg transition-all ${(isRefreshing || isDisabled) ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 cursor-not-allowed' : 'hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30'}`}
-                            onClick={(e) => { e.stopPropagation(); onWarmup(); }}
-                            title={isDisabled ? t('accounts.disabled_tooltip') : (isRefreshing ? t('common.loading') : t('accounts.warmup_this', 'Warmup this account'))}
-                            disabled={isRefreshing || isDisabled}
-                        >
-                            <Sparkles className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-pulse' : ''}`} />
-                        </button>
-                    )}
-                    <button
-                        className={`p-1.5 text-gray-500 dark:text-gray-400 rounded-lg transition-all ${(isRefreshing || isDisabled) ? 'bg-green-50 dark:bg-green-900/10 text-green-600 dark:text-green-400 cursor-not-allowed' : 'hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'}`}
-                        onClick={(e) => { e.stopPropagation(); onRefresh(); }}
-                        title={isDisabled ? t('accounts.disabled_tooltip') : (isRefreshing ? t('common.refreshing') : t('common.refresh'))}
-                        disabled={isRefreshing || isDisabled}
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
-                        onClick={(e) => { e.stopPropagation(); onExport(); }}
-                        title={t('common.export')}
-                    >
-                        <Download className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                        className={cn(
-                            "p-1.5 rounded-lg transition-all",
-                            account.proxy_disabled
-                                ? "text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30"
-                                : "text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30"
-                        )}
-                        onClick={(e) => { e.stopPropagation(); onToggleProxy(); }}
-                        title={account.proxy_disabled ? t('accounts.enable_proxy') : t('accounts.disable_proxy')}
-                    >
-                        {account.proxy_disabled ? (
-                            <ToggleRight className="w-3.5 h-3.5" />
-                        ) : (
-                            <ToggleLeft className="w-3.5 h-3.5" />
-                        )}
-                    </button>
-                    <button
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
-                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                        title={t('common.delete')}
-                    >
-                        <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
+                    {/* 更多操作下拉菜单 */}
+                    <div className="dropdown dropdown-left dropdown-end">
+                        <label tabIndex={0} className="btn btn-ghost btn-xs h-8 w-8 p-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                        </label>
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1.5 shadow-premium-float bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-xl w-52 mt-1">
+                            {/* 查看详情 */}
+                            <li>
+                                <button onClick={(e) => { e.stopPropagation(); onViewDetails(); }} className="flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">
+                                    <Info className="w-4 h-4 text-sky-500" />
+                                    <span className="text-sm font-medium">{t('common.details')}</span>
+                                </button>
+                            </li>
+                            {/* 硬件指纹 */}
+                            <li>
+                                <button onClick={(e) => { e.stopPropagation(); onViewDevice(); }} className="flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">
+                                    <Fingerprint className="w-4 h-4 text-indigo-500" />
+                                    <span className="text-sm font-medium">{t('accounts.device_fingerprint')}</span>
+                                </button>
+                            </li>
+                            <li className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2 list-none" />
+                            {/* 刷新额度 */}
+                            <li>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onRefresh(); }}
+                                    disabled={isRefreshing || isDisabled}
+                                    className={cn("flex items-center gap-2.5 py-2 px-3 rounded-lg transition-colors", (isRefreshing || isDisabled) ? "opacity-50 cursor-not-allowed" : "hover:bg-green-50/50 dark:hover:bg-green-900/20 text-slate-700 dark:text-slate-300")}
+                                >
+                                    <RefreshCw className={cn("w-4 h-4 text-emerald-500", isRefreshing && "animate-spin")} />
+                                    <span className="text-sm font-medium">{t('common.refresh')}</span>
+                                </button>
+                            </li>
+                            {/* 热身账号 */}
+                            {onWarmup && (
+                                <li>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onWarmup(); }}
+                                        disabled={isRefreshing || isDisabled}
+                                        className={cn("flex items-center gap-2.5 py-2 px-3 rounded-lg transition-colors", (isRefreshing || isDisabled) ? "opacity-50 cursor-not-allowed" : "hover:bg-orange-50/50 dark:hover:bg-orange-900/20 text-slate-700 dark:text-slate-300")}
+                                    >
+                                        <Sparkles className={cn("w-4 h-4 text-orange-500", isRefreshing && "animate-pulse")} />
+                                        <span className="text-sm font-medium">{t('accounts.warmup_this')}</span>
+                                    </button>
+                                </li>
+                            )}
+                            <li className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2 list-none" />
+                            {/* 代理开关 (Toggle Proxy) */}
+                            <li>
+                                <button onClick={(e) => { e.stopPropagation(); onToggleProxy(); }} className="flex items-center gap-2.5 py-2 px-3 hover:bg-orange-50/50 dark:hover:bg-orange-900/20 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">
+                                    {isProxyDisabled ? (
+                                        <ToggleRight className="w-4 h-4 text-emerald-500" />
+                                    ) : (
+                                        <ToggleLeft className="w-4 h-4 text-orange-500" />
+                                    )}
+                                    <span className="text-sm font-medium">{isProxyDisabled ? t('accounts.enable_proxy') : t('accounts.disable_proxy')}</span>
+                                </button>
+                            </li>
+                            {/* 账号禁用 (Manual Disable) */}
+                            <li>
+                                <button onClick={(e) => { e.stopPropagation(); onToggleDisabled(!isDisabled); }} className="flex items-center gap-2.5 py-2 px-3 hover:bg-rose-50/50 dark:hover:bg-rose-900/20 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">
+                                    {isDisabled ? (
+                                        <ToggleRight className="w-4 h-4 text-emerald-500" />
+                                    ) : (
+                                        <Lock className="w-4 h-4 text-rose-500" />
+                                    )}
+                                    <span className="text-sm font-medium">{isDisabled ? t('accounts.enable_account') : t('accounts.disable_account_manual')}</span>
+                                </button>
+                            </li>
+                            <li className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2 list-none" />
+                            {/* 导出 */}
+                            <li>
+                                <button onClick={(e) => { e.stopPropagation(); onExport(); }} className="flex items-center gap-2.5 py-2 px-3 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">
+                                    <Download className="w-4 h-4 text-indigo-500" />
+                                    <span className="text-sm font-medium">{t('common.export')}</span>
+                                </button>
+                            </li>
+                            {/* 删除 */}
+                            <li>
+                                <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="flex items-center gap-2.5 py-2 px-3 hover:bg-red-50/50 dark:hover:bg-red-900/20 text-rose-600 dark:text-rose-400 rounded-lg transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                    <span className="text-sm font-medium">{t('common.delete')}</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </td>
         </>
@@ -567,6 +601,7 @@ function AccountTable({
     onExport,
     onDelete,
     onToggleProxy,
+    onToggleDisabled,
     onReorder,
 }: AccountTableProps) {
     const { t } = useTranslation();
@@ -675,6 +710,7 @@ function AccountTable({
                                     onExport={() => onExport(account.id)}
                                     onDelete={() => onDelete(account.id)}
                                     onToggleProxy={() => onToggleProxy(account.id)}
+                                    onToggleDisabled={(disabled) => onToggleDisabled(account.id, disabled)}
                                 />
                             ))}
                         </tbody>
@@ -714,6 +750,7 @@ function AccountTable({
                                     onExport={() => { }}
                                     onDelete={() => { }}
                                     onToggleProxy={() => { }}
+                                    onToggleDisabled={() => { }}
                                 />
                             </tr>
                         </tbody>

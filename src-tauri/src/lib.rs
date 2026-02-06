@@ -1,15 +1,15 @@
+mod commands;
+pub mod constants;
+pub mod error;
 mod models;
 mod modules;
-mod commands;
+mod proxy; // Proxy service module
 mod utils;
-mod proxy;  // Proxy service module
-pub mod error;
-pub mod constants;
 
-use tauri::Manager;
 use modules::logger;
-use tracing::{info, warn, error};
 use std::sync::Arc;
+use tauri::Manager;
+use tracing::{error, info, warn};
 
 /// Increase file descriptor limit for macOS to prevent "Too many open files" errors
 #[cfg(target_os = "macos")]
@@ -19,10 +19,13 @@ fn increase_nofile_limit() {
             rlim_cur: 0,
             rlim_max: 0,
         };
-        
+
         if libc::getrlimit(libc::RLIMIT_NOFILE, &mut rl) == 0 {
-            info!("Current open file limit: soft={}, hard={}", rl.rlim_cur, rl.rlim_max);
-            
+            info!(
+                "Current open file limit: soft={}, hard={}",
+                rl.rlim_cur, rl.rlim_max
+            );
+
             // Attempt to increase to 4096 or maximum hard limit
             let target = 4096.min(rl.rlim_max);
             if rl.rlim_cur < target {
@@ -65,16 +68,20 @@ pub fn run() {
     if let Err(e) = modules::security_db::init_db() {
         error!("Failed to initialize security database: {}", e);
     }
-    
+
     // [FIX] Initialize proxy logs database at startup to avoid "no such table" errors
     if let Err(e) = modules::proxy_db::init_db() {
         error!("Failed to initialize proxy database: {}", e);
     }
 
-    
+    // [FIX] Verify and repair account index at startup
+    if let Err(e) = modules::account::verify_and_repair_index() {
+        error!("Failed to verify/repair account index: {}", e);
+    }
+
     if is_headless {
         info!("Starting in HEADLESS mode...");
-        
+
         let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
         rt.block_on(async {
             // Initialize states manually
@@ -105,7 +112,7 @@ pub fn run() {
                     let env_web_password = std::env::var("ABV_WEB_PASSWORD")
                         .or_else(|_| std::env::var("WEB_PASSWORD"))
                         .ok();
-                    
+
                     if let Some(pwd) = env_web_password {
                         if !pwd.trim().is_empty() {
                             info!("Using Web UI Password from environment variable");
@@ -118,12 +125,14 @@ pub fn run() {
                     let env_auth_mode = std::env::var("ABV_AUTH_MODE")
                         .or_else(|_| std::env::var("AUTH_MODE"))
                         .ok();
-                    
+
                     if let Some(mode_str) = env_auth_mode {
                         let mode = match mode_str.to_lowercase().as_str() {
                             "off" => Some(crate::proxy::ProxyAuthMode::Off),
                             "strict" => Some(crate::proxy::ProxyAuthMode::Strict),
-                            "all_except_health" => Some(crate::proxy::ProxyAuthMode::AllExceptHealth),
+                            "all_except_health" => {
+                                Some(crate::proxy::ProxyAuthMode::AllExceptHealth)
+                            }
                             "auto" => Some(crate::proxy::ProxyAuthMode::Auto),
                             _ => {
                                 warn!("Invalid AUTH_MODE: {}, ignoring", mode_str);
@@ -148,20 +157,22 @@ pub fn run() {
                     info!("💡 Tips: You can use these keys to login to Web UI and access AI APIs.");
                     info!("💡 Search docker logs or grep gui_config.json to find them.");
                     info!("--------------------------------------------------");
-                    
+
                     // Start proxy service
                     if let Err(e) = commands::proxy::internal_start_proxy_service(
                         config.proxy,
                         &proxy_state,
                         crate::modules::integration::SystemManager::Headless,
                         cf_state.clone(),
-                    ).await {
+                    )
+                    .await
+                    {
                         error!("Failed to start proxy service in headless mode: {}", e);
                         std::process::exit(1);
                     }
-                    
+
                     info!("Headless proxy service is running.");
-                    
+
                     // Start smart scheduler
                     modules::scheduler::start_scheduler(None, proxy_state.clone());
                     info!("Smart scheduler started in headless mode.");
@@ -171,7 +182,7 @@ pub fn run() {
                     std::process::exit(1);
                 }
             }
-            
+
             // Wait for Ctrl-C
             tokio::signal::ctrl_c().await.ok();
             info!("Headless mode shutting down");
@@ -191,13 +202,13 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            let _ = app.get_webview_window("main")
-                .map(|window| {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                    #[cfg(target_os = "macos")]
-                    app.set_activation_policy(tauri::ActivationPolicy::Regular).unwrap_or(());
-                });
+            let _ = app.get_webview_window("main").map(|window| {
+                let _ = window.show();
+                let _ = window.set_focus();
+                #[cfg(target_os = "macos")]
+                app.set_activation_policy(tauri::ActivationPolicy::Regular)
+                    .unwrap_or(());
+            });
         }))
         .manage(commands::proxy::ProxyServiceState::new())
         .manage(commands::cloudflared::CloudflaredState::new())
@@ -206,7 +217,7 @@ pub fn run() {
 
             modules::tray::create_tray(app.handle())?;
             info!("Tray created");
-            
+
             // 立即启动管理服务器 (8045)，以便 Web 端能访问
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -214,18 +225,24 @@ pub fn run() {
                 if let Ok(config) = modules::config::load_app_config() {
                     let state = handle.state::<commands::proxy::ProxyServiceState>();
                     let cf_state = handle.state::<commands::cloudflared::CloudflaredState>();
-                    let integration = crate::modules::integration::SystemManager::Desktop(handle.clone());
-                    
+                    let integration =
+                        crate::modules::integration::SystemManager::Desktop(handle.clone());
+
                     // 1. 确保管理后台开启
                     if let Err(e) = commands::proxy::ensure_admin_server(
                         config.proxy.clone(),
                         &state,
                         integration.clone(),
                         Arc::new(cf_state.inner().clone()),
-                    ).await {
+                    )
+                    .await
+                    {
                         error!("Failed to start admin server: {}", e);
                     } else {
-                        info!("Admin server (port {}) started successfully", config.proxy.port);
+                        info!(
+                            "Admin server (port {}) started successfully",
+                            config.proxy.port
+                        );
                     }
 
                     // 2. 自动启动转发逻辑
@@ -235,7 +252,9 @@ pub fn run() {
                             &state,
                             integration,
                             Arc::new(cf_state.inner().clone()),
-                        ).await {
+                        )
+                        .await
+                        {
                             error!("Failed to auto-start proxy service: {}", e);
                         } else {
                             info!("Proxy service auto-started successfully");
@@ -243,14 +262,17 @@ pub fn run() {
                     }
                 }
             });
-            
+
             // Start smart scheduler
             let scheduler_state = app.handle().state::<commands::proxy::ProxyServiceState>();
-            modules::scheduler::start_scheduler(Some(app.handle().clone()), scheduler_state.inner().clone());
-            
+            modules::scheduler::start_scheduler(
+                Some(app.handle().clone()),
+                scheduler_state.inner().clone(),
+            );
+
             // [PHASE 1] 已整合至 Axum 端口 (8045)，不再单独启动 19527 端口
             info!("Management API integrated into main proxy server (port 8045)");
-            
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -259,7 +281,10 @@ pub fn run() {
                 #[cfg(target_os = "macos")]
                 {
                     use tauri::Manager;
-                    window.app_handle().set_activation_policy(tauri::ActivationPolicy::Accessory).unwrap_or(());
+                    window
+                        .app_handle()
+                        .set_activation_policy(tauri::ActivationPolicy::Accessory)
+                        .unwrap_or(());
                 }
                 api.prevent_close();
             }
@@ -319,6 +344,7 @@ pub fn run() {
             commands::should_check_updates,
             commands::update_last_check_time,
             commands::toggle_proxy_status,
+            commands::toggle_account_disabled,
             // Proxy service commands
             commands::proxy::start_proxy_service,
             commands::proxy::stop_proxy_service,
@@ -362,6 +388,7 @@ pub fn run() {
             commands::get_token_stats_by_account,
             commands::get_token_stats_summary,
             commands::get_token_stats_by_model,
+            commands::get_token_stats_model_trend_minute,
             commands::get_token_stats_model_trend_hourly,
             commands::get_token_stats_model_trend_daily,
             commands::get_token_stats_account_trend_hourly,
@@ -404,7 +431,9 @@ pub fn run() {
                     let _ = window.show();
                     let _ = window.unminimize();
                     let _ = window.set_focus();
-                    app_handle.set_activation_policy(tauri::ActivationPolicy::Regular).unwrap_or(());
+                    app_handle
+                        .set_activation_policy(tauri::ActivationPolicy::Regular)
+                        .unwrap_or(());
                 }
             }
             // Suppress unused variable warnings on non-macOS platforms
