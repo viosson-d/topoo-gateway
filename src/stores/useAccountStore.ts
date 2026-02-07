@@ -135,6 +135,16 @@ export const useAccountStore = create<AccountState>((set, get) => ({
             await get().fetchCurrentAccount();
             console.log(`✅ [Store] Current account refreshed`);
 
+            // [FIX] Reload config to sync preferred_account_id updated by backend
+            // prevent frontend stale config from overwriting backend persistence
+            try {
+                const { useConfigStore } = await import('./useConfigStore');
+                await useConfigStore.getState().loadConfig();
+                console.log(`✅ [Store] Config reloaded to sync preferred_account_id`);
+            } catch (e) {
+                console.warn(`⚠️ [Store] Failed to reload config after switch:`, e);
+            }
+
             set({ loading: false });
         } catch (error) {
             console.error(`❌ [Store] Switch failed:`, error);

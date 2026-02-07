@@ -41,19 +41,9 @@ export function AccountControlCard({ className }: AccountControlCardProps) {
         };
     }, []);
 
-    // 🌟 核心修复：永远使用 accounts 数组中的最新对象，防止 store.currentAccount 状态过时
-    const currentAccount = useMemo(() => {
-        if (!storeCurrentAccount) {
-            console.log('[AccountControlCard] No storeCurrentAccount');
-            return null;
-        }
-        const active = accounts.find(a => a.id === storeCurrentAccount.id);
-        if (!active) {
-            console.warn('[AccountControlCard] Active account not found in accounts list, using storeCurrentAccount fallback');
-            return storeCurrentAccount;
-        }
-        return active;
-    }, [accounts, storeCurrentAccount]);
+    // [FIX] 直接使用 storeCurrentAccount,不要从 accounts 数组中查找
+    // 原因:accounts 数组可能还没有更新,导致显示旧账号
+    const currentAccount = storeCurrentAccount;
 
     // --- Logic from BestAccounts ---
 
@@ -278,9 +268,22 @@ export function AccountControlCard({ className }: AccountControlCardProps) {
                                         recommendations.map((item: any) => (
                                             <div key={`${item.id}-${item.type}`}
                                                 onClick={async () => {
-                                                    await switchAccount(item.id);
-                                                    fetchRecentActivity();
-                                                    fetchUsageHistory();
+                                                    console.log('🔵 [AccountControlCard] Candidate clicked:', item.email, item.id);
+                                                    console.log('🔵 [AccountControlCard] Current account before switch:', storeCurrentAccount?.email);
+
+                                                    try {
+                                                        console.log('🔵 [AccountControlCard] Calling switchAccount...');
+                                                        await switchAccount(item.id);
+                                                        console.log('✅ [AccountControlCard] switchAccount completed');
+
+                                                        console.log('🔵 [AccountControlCard] Fetching recent activity...');
+                                                        fetchRecentActivity();
+                                                        console.log('🔵 [AccountControlCard] Fetching usage history...');
+                                                        fetchUsageHistory();
+                                                        console.log('✅ [AccountControlCard] All post-switch actions completed');
+                                                    } catch (error) {
+                                                        console.error('❌ [AccountControlCard] Switch failed:', error);
+                                                    }
                                                 }}
                                                 className="cursor-pointer"
                                             >

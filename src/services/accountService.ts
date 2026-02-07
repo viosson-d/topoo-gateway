@@ -23,14 +23,19 @@ export async function listAccounts(): Promise<Account[]> {
 }
 
 export async function getCurrentAccount(): Promise<Account | null> {
-    console.log('[accountService] getCurrentAccount called');
+    console.log('🔍 [accountService] getCurrentAccount called');
     try {
         const result = await invoke('get_current_account');
-        console.log('[accountService] Backend returned:', result);
-        console.log('[accountService] Result type:', typeof result);
+        console.log('📥 [accountService] Backend returned:', result);
+        if (result) {
+            console.log('   📧 Email:', (result as any).email);
+            console.log('   🆔 ID:', (result as any).id);
+        } else {
+            console.log('   ⚠️ Backend returned null');
+        }
         return result as Account | null;
     } catch (error) {
-        console.error('[accountService] getCurrentAccount error:', error);
+        console.error('❌ [accountService] getCurrentAccount error:', error);
         throw error;
     }
 }

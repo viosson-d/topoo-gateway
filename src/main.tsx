@@ -10,7 +10,7 @@ import "./App.css";
 console.log('[Main] Topoo Gateway initializing...');
 
 // 全局错误捕获
-window.onerror = (msg, url, line, col, error) => {
+window.onerror = (msg, _url, line, col, error) => {
   const errorMsg = `[Frontend Error] ${msg} at ${line}:${col}`;
   console.error(errorMsg, error);
   const root = document.getElementById("root");

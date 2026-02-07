@@ -65,7 +65,7 @@ function Navbar() {
                     {/* Logo - 左侧 */}
                     <div className="flex items-center">
                         <Link to="/" className="text-xl font-medium text-gray-900 dark:text-base-content flex items-center gap-2">
-                            Antigravity Tools
+                            Topoo Gateway
                         </Link>
                     </div>
 

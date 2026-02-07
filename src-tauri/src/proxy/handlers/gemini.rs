@@ -471,18 +471,18 @@ pub async fn handle_generate(
         let strategy = determine_retry_strategy(status_code, &error_text, false);
         let trace_id = format!("gemini_{}", session_id);
 
-        // [NEW] 标记限流状态 (用于 UI 显示和调度避让)
-        if status_code == 429 || status_code == 529 || status_code == 503 || status_code == 500 {
-            token_manager
-                .mark_rate_limited_async(
-                    &email,
-                    status_code,
-                    retry_after.as_deref(),
-                    &error_text,
-                    Some(&mapped_model),
-                )
-                .await;
-        }
+        // [CHANGED] Removes aggressive rate limiting to match Reference behavior and fix account switching issues
+        // if status_code == 429 || status_code == 529 || status_code == 503 || status_code == 500 {
+        //     token_manager
+        //         .mark_rate_limited_async(
+        //             &email,
+        //             status_code,
+        //             retry_after.as_deref(),
+        //             &error_text,
+        //             Some(&mapped_model),
+        //         )
+        //         .await;
+        // }
 
         // 执行退避
         if apply_retry_strategy(strategy, attempt, max_attempts, status_code, &trace_id).await {

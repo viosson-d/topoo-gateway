@@ -29,7 +29,7 @@ export interface DailyUsage {
 }
 
 interface ActivityState {
-    turns: CommunicationTurn[]; // Replaces generic 'events'
+    turns: CommunicationTurn[]; // 直接使用 turns 数组
     usageHistory: DailyUsage[];
     granularity: 'minute' | 'hour' | 'day';
     loading: boolean;
@@ -95,18 +95,16 @@ function mapLogToTurn(log: any): CommunicationTurn | null {
             }
         }
 
-        // 添加用户节点
-        if (userContent) {
-            nodes.push({
-                id: `${log.id}-user`,
-                role: 'engineer',
-                name: log.account_email || 'User',
-                status: 'success',
-                timestamp: log.timestamp,
-                channel: log.protocol || 'api',
-                content: userContent.length > 200 ? userContent.substring(0, 200) + '...' : userContent
-            });
-        }
+        // 始终添加用户节点 (即使没有内容)
+        nodes.push({
+            id: `${log.id}-user`,
+            role: 'engineer',
+            name: log.account_email || 'User',
+            status: 'success',
+            timestamp: log.timestamp,
+            channel: log.protocol || 'api',
+            content: userContent || '(No request content)'
+        });
 
         // 提取 AI 响应内容
         let assistantContent = '';

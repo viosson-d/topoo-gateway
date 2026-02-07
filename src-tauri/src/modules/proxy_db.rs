@@ -106,20 +106,31 @@ pub fn save_log(log: &ProxyRequestLog) -> Result<(), String> {
     Ok(())
 }
 
-/// Get logs summary (without large request_body and response_body fields) with pagination
-pub fn get_logs_summary(limit: usize, offset: usize) -> Result<Vec<ProxyRequestLog>, String> {
+/// Get logs with pagination, optionally including body
+pub fn get_logs_paginated(
+    limit: usize,
+    offset: usize,
+    include_body: bool,
+) -> Result<Vec<ProxyRequestLog>, String> {
     let conn = connect_db()?;
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, timestamp, method, url, status, duration, model, error, 
-                NULL as request_body, NULL as response_body,
+    let (req_body_sql, res_body_sql) = if include_body {
+        ("request_body", "response_body")
+    } else {
+        ("NULL as request_body", "NULL as response_body")
+    };
+
+    let sql = format!(
+        "SELECT id, timestamp, method, url, status, duration, model, error, 
+                {}, {},
                 input_tokens, output_tokens, account_email, mapped_model, protocol, client_ip
          FROM request_logs 
          ORDER BY timestamp DESC 
          LIMIT ?1 OFFSET ?2",
-        )
-        .map_err(|e| e.to_string())?;
+        req_body_sql, res_body_sql
+    );
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
 
     let logs_iter = stmt
         .query_map([limit, offset], |row| {
@@ -134,8 +145,8 @@ pub fn get_logs_summary(limit: usize, offset: usize) -> Result<Vec<ProxyRequestL
                 mapped_model: row.get(13).unwrap_or(None),
                 account_email: row.get(12).unwrap_or(None),
                 error: row.get(7)?,
-                request_body: None,  // Don't query large fields for list view
-                response_body: None, // Don't query large fields for list view
+                request_body: row.get(8).unwrap_or(None),
+                response_body: row.get(9).unwrap_or(None),
                 input_tokens: row.get(10).unwrap_or(None),
                 output_tokens: row.get(11).unwrap_or(None),
                 protocol: row.get(14).unwrap_or(None),
@@ -149,6 +160,11 @@ pub fn get_logs_summary(limit: usize, offset: usize) -> Result<Vec<ProxyRequestL
         logs.push(log.map_err(|e| e.to_string())?);
     }
     Ok(logs)
+}
+
+/// Legacy: Get logs summary without body
+pub fn get_logs_summary(limit: usize, offset: usize) -> Result<Vec<ProxyRequestLog>, String> {
+    get_logs_paginated(limit, offset, false)
 }
 
 /// Get logs (backward compatible, calls get_logs_summary)

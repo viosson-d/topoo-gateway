@@ -73,6 +73,13 @@ pub fn load_account_index() -> Result<AccountIndex, String> {
         "Successfully loaded index with {} accounts",
         index.accounts.len()
     ));
+
+    // [DEBUG] Log current_account_id to trace changes
+    crate::modules::logger::log_info(&format!(
+        "   📍 current_account_id in file: {:?}",
+        index.current_account_id
+    ));
+
     Ok(index)
 }
 
@@ -81,6 +88,13 @@ pub fn save_account_index(index: &AccountIndex) -> Result<(), String> {
     let data_dir = get_data_dir()?;
     let index_path = data_dir.join(ACCOUNTS_INDEX);
     let temp_path = data_dir.join(format!("{}.tmp", ACCOUNTS_INDEX));
+
+    // [DEBUG] Log what we're about to save
+    crate::modules::logger::log_info(&format!(
+        "💾 Saving account index: {} accounts, current_account_id = {:?}",
+        index.accounts.len(),
+        index.current_account_id
+    ));
 
     let content = serde_json::to_string_pretty(index)
         .map_err(|e| format!("failed_to_serialize_account_index: {}", e))?;
@@ -545,10 +559,10 @@ pub async fn switch_account(
         )?;
     }
 
-    // 3. Execute platform-specific system integration (Close proc, Inject DB, Start proc, etc.)
-    integration.on_account_switch(&account).await?;
-
-    // 4. Update tool internal state
+    // [PERSISTENCE FIRST FIX] Save state BEFORE integration
+    // This ensures state is persisted even if integration fails/hangs
+    // Rationale: User's biggest pain point is "account reverts after restart"
+    // We accept "temporary inconsistency" to guarantee "never revert"
     {
         let _lock = ACCOUNT_INDEX_LOCK
             .lock()
@@ -556,15 +570,31 @@ pub async fn switch_account(
         let mut index = load_account_index()?;
         index.current_account_id = Some(account_id.to_string());
         save_account_index(&index)?;
+        crate::modules::logger::log_info(&format!(
+            "✅ [Persistence First] State saved: current_account_id = {}",
+            account_id
+        ));
     }
 
     account.update_last_used();
     save_account(&account)?;
+    crate::modules::logger::log_info("✅ [Persistence First] Account metadata updated");
 
-    crate::modules::logger::log_info(&format!(
-        "Account switch core logic completed: {}",
-        account.email
-    ));
+    // 3. Execute platform-specific system integration (Close proc, Inject DB, Start proc, etc.)
+    // [CRITICAL FIX] Allow integration to fail without blocking state persistence
+    // If this fails/hangs, state is already saved, preventing "death loops"
+    if let Err(e) = integration.on_account_switch(&account).await {
+        crate::modules::logger::log_warn(&format!(
+            "⚠️ Integration failed (state already saved): {}. Antigravity may need manual restart.",
+            e
+        ));
+        // Don't return error - state is already persisted
+        // User can manually restart Antigravity to sync
+    } else {
+        crate::modules::logger::log_info("✅ Integration completed successfully");
+    }
+
+    crate::modules::logger::log_info(&format!("✅ Account switch completed: {}", account.email));
 
     Ok(())
 }

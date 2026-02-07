@@ -1,13 +1,11 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useActivityStore } from "../../stores/useActivityStore";
-import { useState } from "react";
 import { cn } from "../../lib/utils";
 import { useTranslation } from "react-i18next";
 
 export function UsageChart() {
     const { i18n } = useTranslation();
     const { usageHistory, granularity, setGranularity } = useActivityStore();
-    const [activeTab, setActiveTab] = useState<'tokens' | 'sessions'>('tokens');
 
     const formatDate = (dateStr: string) => {
         try {
@@ -54,7 +52,7 @@ export function UsageChart() {
             {/* Header (Source: headerView in OverviewActivityChart.swift) */}
             <header className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug">Activity highlights</h2>
+                    <h2 className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug">Token Usage</h2>
                     {/* Granularity Picker */}
                     <div className="flex bg-zinc-100/50 dark:bg-white/5 p-0.5 rounded-lg border border-black/[0.03]">
                         {['minute', 'hour', 'day'].map((g) => (
@@ -74,35 +72,15 @@ export function UsageChart() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    {/* Metric Picker */}
-                    <div className="flex bg-zinc-100/50 dark:bg-white/5 p-0.5 rounded-lg border border-black/[0.03]">
-                        {['sessions', 'tokens'].map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab as any)}
-                                className={cn(
-                                    "px-2.5 py-0.5 rounded-[5px] text-[10px] font-medium capitalize transition-all",
-                                    activeTab === tab
-                                        ? "bg-white dark:bg-zinc-800 text-foreground shadow-sm"
-                                        : "text-muted-foreground/40 hover:text-muted-foreground/60"
-                                )}
-                            >
-                                {tab}
-                            </button>
-                        ))}
+                {/* Legend */}
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <span className="text-[10px] text-muted-foreground/60">Gemini</span>
                     </div>
-
-                    {/* Legend */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            <span className="text-[10px] text-muted-foreground/60">Gemini</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                            <span className="text-[10px] text-muted-foreground/60">Claude</span>
-                        </div>
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                        <span className="text-[10px] text-muted-foreground/60">Claude</span>
                     </div>
                 </div>
             </header>

@@ -1,4 +1,4 @@
-# Antigravity Tools 🚀
+# Topoo Gateway 🚀
 
 <<<<<<< HEAD
 > 专业的 AI 账号管理与协议反代系统 (v4.0.10)
@@ -6,7 +6,7 @@
 > 专业的 AI 账号管理与协议反代系统 (v3.3.49)
 >>>>>>> c37e387c (Initial commit of Topoo Gateway P16)
 <div align="center">
-  <img src="public/icon.png" alt="Antigravity Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+  <img src="public/icon.png" alt="Topoo Gateway Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
 
   <h3>您的个人高性能 AI 调度网关</h3>
   <p>不仅仅是账号管理，更是打破 API 调用壁垒的终极解决方案。</p>
@@ -41,7 +41,7 @@
 
 ---
 
-**Antigravity Tools** 是一个专为开发者和 AI 爱好者设计的全功能桌面应用。它将多账号管理、协议转换和智能请求调度完美结合，为您提供一个稳定、极速且成本低廉的 **本地 AI 中转站**。
+**Topoo Gateway** 是一个专为开发者和 AI 爱好者设计的全功能桌面应用。它将多账号管理、协议转换和智能请求调度完美结合，为您提供一个稳定、极速且成本低廉的 **本地 AI 中转站**。
 
 通过本应用，您可以将常见的 Web 端 Session (Google/Anthropic) 转化为标准化的 API 接口，消除不同厂商间的协议鸿沟。
 

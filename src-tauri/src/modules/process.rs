@@ -603,7 +603,7 @@ pub fn close_antigravity(#[allow(unused_variables)] timeout_secs: u64) -> Result
 pub fn start_antigravity() -> Result<(), String> {
     let target_app = crate::modules::config::load_app_config()
         .map(|c| c.target_app_name)
-        .unwrap_or_else(|_| "Antigravity".to_string());
+        .unwrap_or_else(|_| "Topoo Gateway".to_string());
     crate::modules::logger::log_info(&format!("Starting {}...", target_app));
 
     let config = crate::modules::config::load_app_config().ok();
@@ -672,6 +672,11 @@ pub fn start_antigravity() -> Result<(), String> {
             }
 
             return Ok(());
+        } else {
+            crate::modules::logger::log_warn(&format!(
+                "⚠️ [Process] Manual path does not exist: {}",
+                path_str
+            ));
         }
     }
 
@@ -680,11 +685,13 @@ pub fn start_antigravity() -> Result<(), String> {
     {
         let mut cmd = Command::new("open");
         cmd.arg("-a").arg(&target_app);
+
         if let Some(ref args) = args {
             for arg in args {
                 cmd.arg(arg);
             }
         }
+
         cmd.spawn().map_err(|e| format!("Startup failed: {}", e))?;
     }
 
@@ -729,7 +736,7 @@ pub fn get_args_from_running_process() -> Option<Vec<String>> {
     system.refresh_all();
     let target_app = crate::modules::config::load_app_config()
         .map(|c| c.target_app_name)
-        .unwrap_or_else(|_| "Antigravity".to_string());
+        .unwrap_or_else(|_| "Topoo Gateway".to_string());
     let target_app_lower = target_app.to_lowercase();
 
     for (_, process) in system.processes() {
@@ -795,7 +802,7 @@ pub fn get_antigravity_executable_path() -> Option<std::path::PathBuf> {
 fn check_standard_locations() -> Option<std::path::PathBuf> {
     let target_app = crate::modules::config::load_app_config()
         .map(|c| c.target_app_name)
-        .unwrap_or_else(|_| "Antigravity".to_string());
+        .unwrap_or_else(|_| "Topoo Gateway".to_string());
 
     #[cfg(target_os = "macos")]
     {

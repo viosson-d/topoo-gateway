@@ -40,7 +40,7 @@ export function ChatInput() {
                     "Authorization": "Bearer sk-antigravity-local"
                 },
                 body: JSON.stringify({
-                    model: "gemini-2.0-flash-exp", // Default fast model
+                    model: "gemini-3-flash", // Default fast model (v3)
                     messages: [
                         { role: "user", content: message }
                     ],

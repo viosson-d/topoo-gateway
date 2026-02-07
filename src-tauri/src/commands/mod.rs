@@ -123,6 +123,15 @@ pub async fn switch_account(
     // 同步托盘
     crate::modules::tray::update_tray_menus(&app);
 
+    // [FIX] Update proxy service memory state immediately
+    // This ensures TokenManager uses the new account without needing a restart
+    if let Err(e) =
+        crate::commands::proxy::set_preferred_account(proxy_state.clone(), Some(account_id.clone()))
+            .await
+    {
+        modules::logger::log_warn(&format!("Failed to update proxy preferred account: {}", e));
+    }
+
     // [FIX #820] Notify proxy to clear stale session bindings and reload accounts
     let _ = crate::commands::proxy::reload_proxy_accounts(proxy_state).await;
 
@@ -132,22 +141,32 @@ pub async fn switch_account(
 /// 获取当前账号
 #[tauri::command]
 pub async fn get_current_account() -> Result<Option<Account>, String> {
-    modules::logger::log_info("Backend Command: get_current_account called");
+    modules::logger::log_info("🔍 [get_current_account] Command called");
 
     // 添加详细日志
     let data_dir = modules::get_data_dir()?;
-    modules::logger::log_info(&format!("   Data directory: {:?}", data_dir));
+    modules::logger::log_info(&format!("   📁 Data directory: {:?}", data_dir));
 
     let account_id = modules::get_current_account_id()?;
-    modules::logger::log_info(&format!("   Current account ID: {:?}", account_id));
+    modules::logger::log_info(&format!(
+        "   🎯 Current account ID from accounts.json: {:?}",
+        account_id
+    ));
 
     if let Some(id) = account_id {
-        modules::logger::log_info(&format!("   Loading account: {}", id));
+        modules::logger::log_info(&format!("   📂 Loading account file: {}.json", id));
         let account = modules::load_account(&id)?;
-        modules::logger::log_info(&format!("   Account loaded: {}", account.email));
+        modules::logger::log_info(&format!("   ✅ Account loaded successfully:"));
+        modules::logger::log_info(&format!("      - Email: {}", account.email));
+        modules::logger::log_info(&format!("      - ID: {}", account.id));
+        modules::logger::log_info(&format!("      - Last used: {:?}", account.last_used));
+        modules::logger::log_info(&format!(
+            "   📤 Returning account to frontend: {}",
+            account.email
+        ));
         Ok(Some(account))
     } else {
-        modules::logger::log_info("   No current account set");
+        modules::logger::log_warn("   ⚠️ No current account set in accounts.json");
         Ok(None)
     }
 }

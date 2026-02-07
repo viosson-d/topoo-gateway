@@ -1,3 +1,5 @@
+use base64::Engine;
+
 /// Protobuf Varint Encoding
 pub fn encode_varint(mut value: u64) -> Vec<u8> {
     let mut buf = Vec::new();
@@ -96,7 +98,9 @@ pub fn find_field(data: &[u8], target_field: u32) -> Result<Option<Vec<u8>>, Str
 
         if field_num == target_field && wire_type == 2 {
             let (length, content_offset) = read_varint(data, new_offset)?;
-            return Ok(Some(data[content_offset..content_offset + length as usize].to_vec()));
+            return Ok(Some(
+                data[content_offset..content_offset + length as usize].to_vec(),
+            ));
         }
 
         // Skip field
@@ -107,7 +111,7 @@ pub fn find_field(data: &[u8], target_field: u32) -> Result<Option<Vec<u8>>, Str
 }
 
 /// Create OAuthTokenInfo (Field 6)
-/// 
+///
 /// Structure:
 /// message OAuthTokenInfo {
 ///     optional string access_token = 1;
@@ -146,14 +150,14 @@ pub fn create_oauth_field(access_token: &str, refresh_token: &str, expiry: i64) 
 
     // Field 4: expiry (Nested Timestamp message, wire_type = 2)
     // Timestamp message contains: Field 1: seconds (int64, wire_type = 0)
-    let timestamp_tag = (1 << 3) | 0;  // Field 1, varint
+    let timestamp_tag = (1 << 3) | 0; // Field 1, varint
     let timestamp_msg = {
         let mut m = encode_varint(timestamp_tag);
         m.extend(encode_varint(expiry as u64));
         m
     };
-    
-    let tag4 = (4 << 3) | 2;  // Field 4, length-delimited
+
+    let tag4 = (4 << 3) | 2; // Field 4, length-delimited
     let field4 = {
         let mut f = encode_varint(tag4);
         f.extend(encode_varint(timestamp_msg.len() as u64));
@@ -180,4 +184,118 @@ pub fn create_email_field(email: &str) -> Vec<u8> {
     f.extend(encode_varint(email.len() as u64));
     f.extend(email.as_bytes());
     f
+}
+
+/// Create Unified OAuth Token Message (for antigravityUnifiedStateSync.oauthToken)
+/// Structure (Reverse Engineered):
+/// Outer Message:
+///   Field 1: string "oauthTokenInfoSentinelKey"
+///   Field 2: SubMessage
+///       Field 1: string (Base64 encoded OAuthTokenInfo)
+///           -> OAuthTokenInfo (Field 1: AccessToken, Field 2: Type, Field 3: RefreshToken, Field 4: Expiry)
+pub fn create_unified_token_message(
+    access_token: &str,
+    refresh_token: &str,
+    expiry: i64,
+) -> Vec<u8> {
+    // 1. Create inner OAuthTokenInfo (Field 1, 2, 3, 4)
+    // Note: create_oauth_field returns it wrapped in Field 6 (Tag + Length + Content).
+    // We need the RAW content of OAuthTokenInfo, not wrapped in Field 6.
+
+    // Field 1: access_token
+    let tag1 = (1 << 3) | 2;
+    let field1 = {
+        let mut f = encode_varint(tag1);
+        f.extend(encode_varint(access_token.len() as u64));
+        f.extend(access_token.as_bytes());
+        f
+    };
+
+    // Field 2: token_type "Bearer"
+    let tag2 = (2 << 3) | 2;
+    let token_type = "Bearer";
+    let field2 = {
+        let mut f = encode_varint(tag2);
+        f.extend(encode_varint(token_type.len() as u64));
+        f.extend(token_type.as_bytes());
+        f
+    };
+
+    // Field 3: refresh_token
+    let tag3 = (3 << 3) | 2;
+    let field3 = {
+        let mut f = encode_varint(tag3);
+        f.extend(encode_varint(refresh_token.len() as u64));
+        f.extend(refresh_token.as_bytes());
+        f
+    };
+
+    // Field 4: expiry
+    let timestamp_tag = (1 << 3) | 0;
+    let timestamp_msg = {
+        let mut m = encode_varint(timestamp_tag);
+        m.extend(encode_varint(expiry as u64));
+        m
+    };
+    let tag4 = (4 << 3) | 2;
+    let field4 = {
+        let mut f = encode_varint(tag4);
+        f.extend(encode_varint(timestamp_msg.len() as u64));
+        f.extend(timestamp_msg);
+        f
+    };
+
+    let oauth_info_raw = [field1, field2, field3, field4].concat();
+
+    // 2. Base64 Encode the Raw OAuthTokenInfo
+    // Use standard config, but we need to check if url_safe is preferred.
+    // The dump used standard alphabet (no -_), but let's stick to standard as per our imports.
+    // Wait, the dump in Step 9063 had `+` and `/`, so it IS Standard Base64.
+    let oauth_info_b64 = base64::engine::general_purpose::STANDARD.encode(&oauth_info_raw);
+
+    // 3. Wrap in SubMessage -> Field 1
+    let sub_tag1 = (1 << 3) | 2;
+    let sub_field1 = {
+        let mut f = encode_varint(sub_tag1);
+        f.extend(encode_varint(oauth_info_b64.len() as u64));
+        f.extend(oauth_info_b64.as_bytes());
+        f
+    };
+
+    // The SubMessage only contains Field 1
+    let sub_message = sub_field1;
+
+    // 4. Wrap SubMessage in Outer Message -> Field 2
+    let outer_tag2 = (2 << 3) | 2;
+    let outer_field2 = {
+        let mut f = encode_varint(outer_tag2);
+        f.extend(encode_varint(sub_message.len() as u64));
+        f.extend(sub_message);
+        f
+    };
+
+    // 5. Outer Field 1: sentinel string
+    let sentinel = "oauthTokenInfoSentinelKey";
+    let outer_tag1 = (1 << 3) | 2;
+    let outer_field1 = {
+        let mut f = encode_varint(outer_tag1);
+        f.extend(encode_varint(sentinel.len() as u64));
+        f.extend(sentinel.as_bytes());
+        f
+    };
+
+    // Payload: Field 1 (Sentinel) + Field 2 (TokenWrapper)
+    let payload = [outer_field1, outer_field2].concat();
+
+    // 6. Wrap EVERYTHING in a Top-Level Field 1
+    // The DB dump shows the entire content is inside Field 1.
+    let root_tag1 = (1 << 3) | 2;
+    let root_field1 = {
+        let mut f = encode_varint(root_tag1);
+        f.extend(encode_varint(payload.len() as u64));
+        f.extend(payload);
+        f
+    };
+
+    root_field1
 }

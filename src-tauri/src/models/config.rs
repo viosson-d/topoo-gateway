@@ -30,7 +30,7 @@ pub struct AppConfig {
 }
 
 fn default_target_app_name() -> String {
-    "Antigravity".to_string()
+    "Topoo Gateway".to_string()
 }
 
 /// Scheduled warmup configuration
