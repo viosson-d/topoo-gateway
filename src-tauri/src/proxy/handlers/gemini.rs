@@ -109,8 +109,9 @@ pub async fn handle_generate(
             &model_name,
             &mapped_model,
             &tools_val,
-            None, // size (not applicable for Gemini native protocol)
-            None, // quality
+            None,        // size (not applicable for Gemini native protocol)
+            None,        // quality
+            Some(&body), // [NEW] Pass body for Gemini imageConfig parsing
         );
 
         // 4. 获取 Token (使用准确的 request_type)
@@ -118,7 +119,7 @@ pub async fn handle_generate(
         let session_id = SessionManager::extract_gemini_session_id(&body, &model_name);
 
         // 关键：在重试尝试 (attempt > 0) 时强制轮换账号
-        let (access_token, project_id, email, _wait_ms) = match token_manager
+        let (access_token, project_id, email, account_id, _wait_ms) = match token_manager
             .get_token(
                 &config.request_type,
                 attempt > 0,
@@ -172,7 +173,13 @@ pub async fn handle_generate(
         };
 
         let response = match upstream
-            .call_v1_internal(upstream_method, &access_token, wrapped_body, query_string)
+            .call_v1_internal(
+                upstream_method,
+                &access_token,
+                wrapped_body,
+                query_string,
+                Some(&account_id),
+            )
             .await
         {
             Ok(r) => r,
@@ -592,7 +599,7 @@ pub async fn handle_count_tokens(
     Json(_body): Json<Value>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let model_group = "gemini";
-    let (_access_token, _project_id, _, _wait_ms) = state
+    let (_access_token, _project_id, _email, _account_id, _wait_ms) = state
         .token_manager
         .get_token(model_group, false, None, "gemini")
         .await

@@ -83,6 +83,12 @@ pub async fn monitor_middleware(
         request
     };
 
+    // Extract username from Request extensions if auth middleware injected it
+    let username = request
+        .extensions()
+        .get::<crate::proxy::middleware::auth::UserTokenIdentity>()
+        .map(|id| id.username.clone());
+
     let response = next.run(request).await;
 
     let duration = start.elapsed().as_millis() as u64;
@@ -140,6 +146,7 @@ pub async fn monitor_middleware(
         input_tokens: None,
         output_tokens: None,
         protocol,
+        username,
     };
 
     if content_type.contains("text/event-stream") {

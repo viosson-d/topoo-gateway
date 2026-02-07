@@ -534,7 +534,7 @@ pub async fn switch_account(
     ));
 
     // 2. Ensure Token is valid (auto-refresh)
-    let fresh_token = oauth::ensure_fresh_token(&account.token)
+    let fresh_token = oauth::ensure_fresh_token(&account.token, None)
         .await
         .map_err(|e| format!("Token refresh failed: {}", e))?;
 
@@ -911,7 +911,7 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
     use reqwest::StatusCode;
 
     // 1. Time-based check - ensure Token is valid first
-    let token = match oauth::ensure_fresh_token(&account.token).await {
+    let token = match oauth::ensure_fresh_token(&account.token, None).await {
         Ok(t) => t,
         Err(e) => {
             if e.contains("invalid_grant") {
@@ -936,7 +936,7 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
         let name = if account.name.is_none()
             || account.name.as_ref().map_or(false, |n| n.trim().is_empty())
         {
-            match oauth::get_user_info(&token.access_token).await {
+            match oauth::get_user_info(&token.access_token, None).await {
                 Ok(user_info) => user_info.get_display_name(),
                 Err(_) => None,
             }
@@ -955,7 +955,7 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
             account.email
         ));
         // Use updated token
-        match oauth::get_user_info(&account.token.access_token).await {
+        match oauth::get_user_info(&account.token.access_token, None).await {
             Ok(user_info) => {
                 let display_name = user_info.get_display_name();
                 modules::logger::log_info(&format!(
@@ -977,8 +977,12 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
     }
 
     // 2. Attempt query
-    let result: crate::error::AppResult<(QuotaData, Option<String>)> =
-        modules::fetch_quota(&account.token.access_token, &account.email).await;
+    let result: crate::error::AppResult<(QuotaData, Option<String>)> = modules::fetch_quota(
+        &account.token.access_token,
+        &account.email,
+        Some(&account.id),
+    )
+    .await;
 
     // Capture potentially updated project_id and save
     if let Ok((ref _q, ref project_id)) = result {
@@ -1008,8 +1012,11 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
                 ));
 
                 // Force refresh
-                let token_res = match oauth::refresh_access_token(&account.token.refresh_token)
-                    .await
+                let token_res = match oauth::refresh_access_token(
+                    &account.token.refresh_token,
+                    Some(&account.id),
+                )
+                .await
                 {
                     Ok(t) => t,
                     Err(e) => {
@@ -1040,7 +1047,7 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
                 let name = if account.name.is_none()
                     || account.name.as_ref().map_or(false, |n| n.trim().is_empty())
                 {
-                    match oauth::get_user_info(&token_res.access_token).await {
+                    match oauth::get_user_info(&token_res.access_token, None).await {
                         Ok(user_info) => user_info.get_display_name(),
                         Err(_) => None,
                     }
@@ -1055,7 +1062,7 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
 
                 // Retry query
                 let retry_result: crate::error::AppResult<(QuotaData, Option<String>)> =
-                    modules::fetch_quota(&new_token.access_token, &account.email).await;
+                    modules::fetch_quota(&new_token.access_token, &account.email, None).await;
 
                 // Also handle project_id saving during retry
                 if let Ok((ref _q, ref project_id)) = retry_result {

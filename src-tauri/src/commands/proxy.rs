@@ -273,6 +273,7 @@ pub async fn ensure_admin_server(
         config.debug_logging.clone(),
         integration.clone(),
         cloudflared_state,
+        config.proxy_pool.clone(),
     )
     .await
     {

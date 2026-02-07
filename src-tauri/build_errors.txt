@@ -1,0 +1,934 @@
+    Blocking waiting for file lock on build directory
+    Checking antigravity_tools v0.0.125 (/Users/viosson/AITD/1_PROJECTS/P16_TOPOO_GATEWAY/src-tauri)
+    Building [=======================> ] 643/645: antigravity_tools           error[E0433]: failed to resolve: use of unresolved module or unlinked crate `aes_gcm`
+ --> src/utils/crypto.rs:1:5
+  |
+1 | use aes_gcm::{
+  |     ^^^^^^^ use of unresolved module or unlinked crate `aes_gcm`
+  |
+  = help: if you wanted to use a crate named `aes_gcm`, use `cargo add aes_gcm` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `parking_lot`
+ --> src/modules/log_bridge.rs:4:5
+  |
+4 | use parking_lot::RwLock;
+  |     ^^^^^^^^^^^ use of unresolved module or unlinked crate `parking_lot`
+  |
+  = help: if you wanted to use a crate named `parking_lot`, use `cargo add parking_lot` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `aes_gcm`
+ --> src/utils/crypto.rs:1:5
+  |
+1 | use aes_gcm::{
+  |     ^^^^^^^ use of unresolved module or unlinked crate `aes_gcm`
+  |
+  = help: if you wanted to use a crate named `aes_gcm`, use `cargo add aes_gcm` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1719:35
+     |
+1719 |     let tokens = crate::commands::user_token::list_user_tokens().await.map_err(|e| {
+     |                                   ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1729:36
+     |
+1729 |     let summary = crate::commands::user_token::get_user_token_summary().await.map_err(|e| {
+     |                                    ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1739:42
+     |
+1739 |     Json(payload): Json<crate::commands::user_token::CreateTokenRequest>,
+     |                                          ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1741:34
+     |
+1741 |     let token = crate::commands::user_token::create_user_token(payload).await.map_err(|e| {
+     |                                  ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1760:22
+     |
+1760 |     crate::commands::user_token::renew_user_token(id, payload.expires_type).await.map_err(|e| {
+     |                      ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1772:22
+     |
+1772 |     crate::commands::user_token::delete_user_token(id).await.map_err(|e| {
+     |                      ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1783:42
+     |
+1783 |     Json(payload): Json<crate::commands::user_token::UpdateTokenRequest>,
+     |                                          ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0433]: failed to resolve: could not find `user_token` in `commands`
+    --> src/proxy/server.rs:1785:22
+     |
+1785 |     crate::commands::user_token::update_user_token(id, payload).await.map_err(|e| {
+     |                      ^^^^^^^^^^ could not find `user_token` in `commands`
+
+error[E0425]: cannot find function `export_accounts_by_ids` in module `account`
+   --> src/proxy/server.rs:871:29
+    |
+871 |     let response = account::export_accounts_by_ids(&payload.account_ids).map_err(|e| {
+    |                             ^^^^^^^^^^^^^^^^^^^^^^ help: a function with a similar name exists: `export_accounts`
+    |
+   ::: src/modules/account.rs:896:1
+    |
+896 | pub fn export_accounts() -> Result<Vec<(String, String)>, String> {
+    | ----------------------------------------------------------------- similarly named function `export_accounts` defined here
+
+warning: unused imports: `AccountExportItem` and `AccountExportResponse`
+   --> src/proxy/server.rs:176:21
+    |
+176 | use crate::models::{AccountExportItem, AccountExportResponse};
+    |                     ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `RetryStrategy`
+  --> src/proxy/handlers/gemini.rs:13:76
+   |
+13 |     apply_retry_strategy, determine_retry_strategy, should_rotate_account, RetryStrategy,
+   |                                                                            ^^^^^^^^^^^^^
+
+warning: unused import: `tokio::time::Duration`
+  --> src/proxy/handlers/gemini.rs:18:5
+   |
+18 | use tokio::time::Duration;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Mutex` and `OnceLock`
+ --> src/proxy/mappers/openai/streaming.rs:8:17
+  |
+8 | use std::sync::{Mutex, OnceLock};
+  |                 ^^^^^  ^^^^^^^^
+
+warning: unused import: `json`
+ --> src/proxy/mappers/openai/collector.rs:7:18
+  |
+7 | use serde_json::{json, Value};
+  |                  ^^^^
+
+warning: unused import: `std::io`
+ --> src/proxy/mappers/openai/collector.rs:9:5
+  |
+9 | use std::io;
+  |     ^^^^^^^
+
+warning: unused import: `body::Body`
+ --> src/proxy/middleware/ip_filter.rs:6:5
+  |
+6 |     body::Body,
+  |     ^^^^^^^^^^
+
+warning: unused import: `config::get_thinking_budget_config`
+  --> src/proxy/mod.rs:30:9
+   |
+30 | pub use config::get_thinking_budget_config;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `config::update_thinking_budget_config`
+  --> src/proxy/mod.rs:31:9
+   |
+31 | pub use config::update_thinking_budget_config;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `config::ProxyPoolConfig`
+  --> src/proxy/mod.rs:34:9
+   |
+34 | pub use config::ProxyPoolConfig;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `config::ThinkingBudgetConfig`
+  --> src/proxy/mod.rs:35:9
+   |
+35 | pub use config::ThinkingBudgetConfig;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `config::ThinkingBudgetMode`
+  --> src/proxy/mod.rs:36:9
+   |
+36 | pub use config::ThinkingBudgetMode;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ProxyPoolManager`, `get_global_proxy_pool`, and `init_global_proxy_pool`
+  --> src/proxy/mod.rs:43:22
+   |
+43 | pub use proxy_pool::{ProxyPoolManager, get_global_proxy_pool, init_global_proxy_pool};
+   |                      ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/account.rs:537:23
+    |
+537 |     let fresh_token = oauth::ensure_fresh_token(&account.token)
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^---------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:212:14
+    |
+212 | pub async fn ensure_fresh_token(
+    |              ^^^^^^^^^^^^^^^^^^
+213 |     current_token: &crate::models::TokenData,
+214 |     account_id: Option<&str>,
+    |     ------------------------
+help: provide the argument
+    |
+537 |     let fresh_token = oauth::ensure_fresh_token(&account.token, /* std::option::Option<&str> */)
+    |                                                               +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/account.rs:914:23
+    |
+914 |     let token = match oauth::ensure_fresh_token(&account.token).await {
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^---------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:212:14
+    |
+212 | pub async fn ensure_fresh_token(
+    |              ^^^^^^^^^^^^^^^^^^
+213 |     current_token: &crate::models::TokenData,
+214 |     account_id: Option<&str>,
+    |     ------------------------
+help: provide the argument
+    |
+914 |     let token = match oauth::ensure_fresh_token(&account.token, /* std::option::Option<&str> */).await {
+    |                                                               +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/account.rs:939:19
+    |
+939 |             match oauth::get_user_info(&token.access_token).await {
+    |                   ^^^^^^^^^^^^^^^^^^^^--------------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:186:14
+    |
+186 | pub async fn get_user_info(access_token: &str, account_id: Option<&str>) -> Result<UserInfo, String> {
+    |              ^^^^^^^^^^^^^                     ------------------------
+help: provide the argument
+    |
+939 |             match oauth::get_user_info(&token.access_token, /* std::option::Option<&str> */).await {
+    |                                                           +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/account.rs:958:15
+    |
+958 |         match oauth::get_user_info(&account.token.access_token).await {
+    |               ^^^^^^^^^^^^^^^^^^^^----------------------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:186:14
+    |
+186 | pub async fn get_user_info(access_token: &str, account_id: Option<&str>) -> Result<UserInfo, String> {
+    |              ^^^^^^^^^^^^^                     ------------------------
+help: provide the argument
+    |
+958 |         match oauth::get_user_info(&account.token.access_token, /* std::option::Option<&str> */).await {
+    |                                                               +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+    --> src/modules/account.rs:1050:27
+     |
+1050 |                     match oauth::get_user_info(&token_res.access_token).await {
+     |                           ^^^^^^^^^^^^^^^^^^^^------------------------- argument #2 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/oauth.rs:186:14
+     |
+ 186 | pub async fn get_user_info(access_token: &str, account_id: Option<&str>) -> Result<UserInfo, String> {
+     |              ^^^^^^^^^^^^^                     ------------------------
+help: provide the argument
+     |
+1050 |                     match oauth::get_user_info(&token_res.access_token, /* std::option::Option<&str> */).await {
+     |                                                                       +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 3 arguments but 2 arguments were supplied
+    --> src/modules/account.rs:1065:21
+     |
+1065 |                     modules::fetch_quota(&new_token.access_token, &account.email).await;
+     |                     ^^^^^^^^^^^^^^^^^^^^----------------------------------------- argument #3 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/mod.rs:38:14
+     |
+  38 | pub async fn fetch_quota(access_token: &str, email: &str, account_id: Option<&str>) -> crate::error::AppResult<(models::QuotaData, Option...
+     |              ^^^^^^^^^^^                                  ------------------------
+help: provide the argument
+     |
+1065 |                     modules::fetch_quota(&new_token.access_token, &account.email, /* std::option::Option<&str> */).await;
+     |                                                                                 +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/migration.rs:166:35
+    |
+166 | ...                   match oauth::refresh_access_token(&refresh_token).await {
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^---------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:136:14
+    |
+136 | pub async fn refresh_access_token(refresh_token: &str, account_id: Option<&str>) -> Result<TokenResponse, String> {
+    |              ^^^^^^^^^^^^^^^^^^^^                      ------------------------
+help: provide the argument
+    |
+166 |                             match oauth::refresh_access_token(&refresh_token, /* std::option::Option<&str> */).await {
+    |                                                                             +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/migration.rs:168:43
+    |
+168 | ...                   match oauth::get_user_info(&token_resp.access_token).await {
+    |                             ^^^^^^^^^^^^^^^^^^^^-------------------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:186:14
+    |
+186 | pub async fn get_user_info(access_token: &str, account_id: Option<&str>) -> Result<UserInfo, String> {
+    |              ^^^^^^^^^^^^^                     ------------------------
+help: provide the argument
+    |
+168 |                                     match oauth::get_user_info(&token_resp.access_token, /* std::option::Option<&str> */).await {
+    |                                                                                        +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/migration.rs:248:22
+    |
+248 |     let token_resp = oauth::refresh_access_token(&refresh_token).await?;
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^---------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:136:14
+    |
+136 | pub async fn refresh_access_token(refresh_token: &str, account_id: Option<&str>) -> Result<TokenResponse, String> {
+    |              ^^^^^^^^^^^^^^^^^^^^                      ------------------------
+help: provide the argument
+    |
+248 |     let token_resp = oauth::refresh_access_token(&refresh_token, /* std::option::Option<&str> */).await?;
+    |                                                                +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/modules/migration.rs:249:21
+    |
+249 |     let user_info = oauth::get_user_info(&token_resp.access_token).await?;
+    |                     ^^^^^^^^^^^^^^^^^^^^-------------------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:186:14
+    |
+186 | pub async fn get_user_info(access_token: &str, account_id: Option<&str>) -> Result<UserInfo, String> {
+    |              ^^^^^^^^^^^^^                     ------------------------
+help: provide the argument
+    |
+249 |     let user_info = oauth::get_user_info(&token_resp.access_token, /* std::option::Option<&str> */).await?;
+    |                                                                  +++++++++++++++++++++++++++++++++
+
+error[E0308]: mismatched types
+   --> src/proxy/handlers/openai.rs:164:13
+    |
+164 |           let (access_token, project_id, email, account_id, _wait_ms) = match token_manager
+    |  _____________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^___-
+    | |             |
+    | |             expected a tuple with 4 elements, found one with 5 elements
+165 | |             .get_token(
+166 | |                 &config.request_type,
+167 | |                 attempt > 0,
+...   |
+184 | |         };
+    | |_________- this expression has type `(std::string::String, std::string::String, std::string::String, u64)`
+    |
+    = note: expected tuple `(std::string::String, std::string::String, std::string::String, u64)`
+               found tuple `(_, _, _, _, _)`
+
+error[E0599]: no method named `get_account_id_by_email` found for struct `Arc<TokenManager>` in the current scope
+   --> src/proxy/handlers/openai.rs:572:53
+    |
+572 |                 if let Some(acc_id) = token_manager.get_account_id_by_email(&email) {
+    |                                                     ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: there is a method `get_token_by_email` with a similar name
+    |
+572 -                 if let Some(acc_id) = token_manager.get_account_id_by_email(&email) {
+572 +                 if let Some(acc_id) = token_manager.get_token_by_email(&email) {
+    |
+
+error[E0599]: no method named `set_validation_block_public` found for struct `Arc<TokenManager>` in the current scope
+   --> src/proxy/handlers/openai.rs:586:55
+    |
+586 |                         if let Err(e) = token_manager.set_validation_block_public(&acc_id, block_until, &error_text).await {
+    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `Arc<TokenManager>`
+
+error[E0599]: no method named `set_forbidden` found for struct `Arc<TokenManager>` in the current scope
+   --> src/proxy/handlers/openai.rs:592:51
+    |
+592 |                     if let Err(e) = token_manager.set_forbidden(&acc_id, &error_text).await {
+    |                                                   ^^^^^^^^^^^^^ method not found in `Arc<TokenManager>`
+
+error[E0308]: mismatched types
+    --> src/proxy/handlers/openai.rs:1070:13
+     |
+1070 |           let (access_token, project_id, email, account_id, _wait_ms) = match token_manager
+     |  _____________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^___-
+     | |             |
+     | |             expected a tuple with 4 elements, found one with 5 elements
+1071 | |             .get_token(
+1072 | |                 &config.request_type,
+1073 | |                 force_rotate,
+...    |
+1088 | |         };
+     | |_________- this expression has type `(std::string::String, std::string::String, std::string::String, u64)`
+     |
+     = note: expected tuple `(std::string::String, std::string::String, std::string::String, u64)`
+                found tuple `(_, _, _, _, _)`
+
+error[E0308]: mismatched types
+    --> src/proxy/handlers/openai.rs:1563:21
+     |
+1563 |                   let (access_token, project_id, email, account_id, _wait_ms) = match token_manager
+     |  _____________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^___-
+     | |                     |
+     | |                     expected a tuple with 4 elements, found one with 5 elements
+1564 | |                     .get_token("image_gen", attempt > 0, None, "dall-e-3")
+1565 | |                     .await
+...    |
+1576 | |                 };
+     | |_________________- this expression has type `(std::string::String, std::string::String, std::string::String, u64)`
+     |
+     = note: expected tuple `(std::string::String, std::string::String, std::string::String, u64)`
+                found tuple `(_, _, _, _, _)`
+
+error[E0282]: type annotations needed for `Vec<TokioJoinHandle<Result<(_, std::string::String), std::string::String>>>`
+    --> src/proxy/handlers/openai.rs:1547:9
+     |
+1547 |     let mut tasks = Vec::new();
+     |         ^^^^^^^^^
+...
+1662 |                     let raw = gemini_resp.get("response").unwrap_or(&gemini_resp);
+     |                               ----------- type must be known at this point
+     |
+help: consider giving `tasks` an explicit type, where the placeholders `_` are specified
+     |
+1547 |     let mut tasks: Vec<TokioJoinHandle<Result<(_, _), _>>> = Vec::new();
+     |                  +++++++++++++++++++++++++++++++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1665:36
+     |
+1665 |                         .and_then(|c| c.get(0))
+     |                                    ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+1665 |                         .and_then(|c: /* Type */| c.get(0))
+     |                                     ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1666:36
+     |
+1666 |                         .and_then(|cand| cand.get("content"))
+     |                                    ^^^^  ---- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+1666 |                         .and_then(|cand: /* Type */| cand.get("content"))
+     |                                        ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1667:36
+     |
+1667 |                         .and_then(|content| content.get("parts"))
+     |                                    ^^^^^^^  ------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+1667 |                         .and_then(|content: /* Type */| content.get("parts"))
+     |                                           ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1668:36
+     |
+1668 |                         .and_then(|p| p.as_array())
+     |                                    ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+1668 |                         .and_then(|p: /* Type */| p.as_array())
+     |                                     ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1671:48
+     |
+1671 | ...                   if let Some(img) = part.get("inlineData") {
+     |                                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1672:44
+     |
+1672 | ...                   let data = img.get("data").and_then(|v| v.as_str()).unwrap_or("");
+     |                                  ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1672:70
+     |
+1672 | ...                   let data = img.get("data").and_then(|v| v.as_str()).unwrap_or("");
+     |                                                            ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+1672 |                                 let data = img.get("data").and_then(|v: /* Type */| v.as_str()).unwrap_or("");
+     |                                                                       ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:1677:56
+     |
+1677 | ...                   .and_then(|v| v.as_str())
+     |                                  ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+1677 |                                             .and_then(|v: /* Type */| v.as_str())
+     |                                                         ++++++++++++
+
+error[E0308]: mismatched types
+    --> src/proxy/handlers/openai.rs:1948:21
+     |
+1948 |                   let (access_token, project_id, email, account_id, _wait_ms) = match token_manager
+     |  _____________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^___-
+     | |                     |
+     | |                     expected a tuple with 4 elements, found one with 5 elements
+1949 | |                     .get_token("image_gen", attempt > 0, None, "dall-e-3")
+1950 | |                     .await
+...    |
+1961 | |                 };
+     | |_________________- this expression has type `(std::string::String, std::string::String, std::string::String, u64)`
+     |
+     = note: expected tuple `(std::string::String, std::string::String, std::string::String, u64)`
+                found tuple `(_, _, _, _, _)`
+
+error[E0282]: type annotations needed for `Vec<TokioJoinHandle<Result<(_, _, std::string::String), std::string::String>>>`
+    --> src/proxy/handlers/openai.rs:1934:9
+     |
+1934 |     let mut tasks = Vec::new();
+     |         ^^^^^^^^^
+...
+2048 |                     let raw = gemini_resp.get("response").unwrap_or(&gemini_resp);
+     |                               ----------- type must be known at this point
+     |
+help: consider giving `tasks` an explicit type, where the placeholders `_` are specified
+     |
+1934 |     let mut tasks: Vec<TokioJoinHandle<Result<(_, _, _), _>>> = Vec::new();
+     |                  ++++++++++++++++++++++++++++++++++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2051:36
+     |
+2051 |                         .and_then(|c| c.get(0))
+     |                                    ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2051 |                         .and_then(|c: /* Type */| c.get(0))
+     |                                     ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2052:36
+     |
+2052 |                         .and_then(|cand| cand.get("content"))
+     |                                    ^^^^  ---- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2052 |                         .and_then(|cand: /* Type */| cand.get("content"))
+     |                                        ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2053:36
+     |
+2053 |                         .and_then(|content| content.get("parts"))
+     |                                    ^^^^^^^  ------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2053 |                         .and_then(|content: /* Type */| content.get("parts"))
+     |                                           ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2054:36
+     |
+2054 |                         .and_then(|p| p.as_array())
+     |                                    ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2054 |                         .and_then(|p: /* Type */| p.as_array())
+     |                                     ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2057:48
+     |
+2057 | ...                   if let Some(img) = part.get("inlineData") {
+     |                                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2058:44
+     |
+2058 | ...                   let data = img.get("data").and_then(|v| v.as_str()).unwrap_or("");
+     |                                  ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2058:70
+     |
+2058 | ...                   let data = img.get("data").and_then(|v| v.as_str()).unwrap_or("");
+     |                                                            ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2058 |                                 let data = img.get("data").and_then(|v: /* Type */| v.as_str()).unwrap_or("");
+     |                                                                       ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/handlers/openai.rs:2063:56
+     |
+2063 | ...                   .and_then(|v| v.as_str())
+     |                                  ^  - type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2063 |                                             .and_then(|v: /* Type */| v.as_str())
+     |                                                         ++++++++++++
+
+error[E0308]: mismatched types
+   --> src/proxy/handlers/audio.rs:103:9
+    |
+103 |       let (access_token, project_id, email, account_id, _wait_ms) = token_manager
+    |  _________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^___-
+    | |         |
+    | |         expected a tuple with 4 elements, found one with 5 elements
+104 | |         .get_token("text", false, None, &model)
+105 | |         .await
+106 | |         .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    | |___________________________________________________________- this expression has type `(std::string::String, std::string::String, std::string::String, u64)`
+    |
+    = note: expected tuple `(std::string::String, std::string::String, std::string::String, u64)`
+               found tuple `(_, _, _, _, _)`
+
+error[E0308]: mismatched types
+   --> src/proxy/handlers/claude.rs:423:13
+    |
+423 |   ...   let (access_token, project_id, email, account_id, _wait_ms) = match token_manager.get_token(&config.request_type, force_rotate_toke...
+    |  ___________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^___-
+    | |           |
+    | |           expected a tuple with 4 elements, found one with 5 elements
+424 | | ...       Ok(t) => t,
+425 | | ...       Err(e) => {
+426 | | ...           let safe_message = if e.contains("invalid_grant") {
+...   |
+446 | | ...   };
+    | |_______- this expression has type `(std::string::String, std::string::String, std::string::String, u64)`
+    |
+    = note: expected tuple `(std::string::String, std::string::String, std::string::String, u64)`
+               found tuple `(_, _, _, _, _)`
+
+error[E0599]: no method named `set_validation_block_public` found for struct `Arc<TokenManager>` in the current scope
+    --> src/proxy/handlers/claude.rs:1113:47
+     |
+1113 |                 if let Err(e) = token_manager.set_validation_block_public(&account_id, block_until, &error_text).await {
+     |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `Arc<TokenManager>`
+
+error[E0599]: no method named `set_forbidden` found for struct `Arc<TokenManager>` in the current scope
+    --> src/proxy/handlers/claude.rs:1119:43
+     |
+1119 |             if let Err(e) = token_manager.set_forbidden(&account_id, &error_text).await {
+     |                                           ^^^^^^^^^^^^^ method not found in `Arc<TokenManager>`
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+   --> src/proxy/handlers/gemini.rs:108:22
+    |
+108 |           let config = crate::proxy::mappers::common_utils::resolve_request_config(
+    |  ______________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+109 | |             &model_name,
+110 | |             &mapped_model,
+111 | |             &tools_val,
+112 | |             None, // size (not applicable for Gemini native protocol)
+113 | |             None, // quality
+114 | |         );
+    | |_________- argument #6 of type `std::option::Option<&serde_json::Value>` is missing
+    |
+note: function defined here
+   --> src/proxy/mappers/common_utils.rs:19:8
+    |
+ 19 | pub fn resolve_request_config(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+...
+ 25 |     body: Option<&Value>,  // [NEW] Request body for Gemini native imageConfig
+    |     --------------------
+help: provide the argument
+    |
+108 ~         let config = crate::proxy::mappers::common_utils::resolve_request_config(
+109 +             &model_name,
+110 +             &mapped_model,
+111 +             &tools_val,
+112 +             None,
+113 +             None,
+114 +             /* std::option::Option<&serde_json::Value> */,
+115 ~         );
+    |
+
+error[E0061]: this method takes 5 arguments but 4 arguments were supplied
+   --> src/proxy/handlers/gemini.rs:175:14
+    |
+175 |             .call_v1_internal(upstream_method, &access_token, wrapped_body, query_string)
+    |              ^^^^^^^^^^^^^^^^------------------------------------------------------------ argument #5 of type `std::option::Option<&str>` is missing
+    |
+note: method defined here
+   --> src/proxy/upstream/client.rs:154:18
+    |
+154 |     pub async fn call_v1_internal(
+    |                  ^^^^^^^^^^^^^^^^
+...
+160 |         account_id: Option<&str>, // [NEW] Account ID for proxy selection
+    |         ------------------------
+help: provide the argument
+    |
+175 |             .call_v1_internal(upstream_method, &access_token, wrapped_body, query_string, /* std::option::Option<&str> */)
+    |                                                                                         +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src/proxy/token_manager.rs:708:27
+    |
+708 |                     match crate::modules::oauth::refresh_access_token(&token.refresh_token).await {
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^---------------------- argument #2 of type `std::option::Option<&str>` is missing
+    |
+note: function defined here
+   --> src/modules/oauth.rs:136:14
+    |
+136 | pub async fn refresh_access_token(refresh_token: &str, account_id: Option<&str>) -> Result<TokenResponse, String> {
+    |              ^^^^^^^^^^^^^^^^^^^^                      ------------------------
+help: provide the argument
+    |
+708 |                     match crate::modules::oauth::refresh_access_token(&token.refresh_token, /* std::option::Option<&str> */).await {
+    |                                                                                           +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+    --> src/proxy/token_manager.rs:1056:23
+     |
+1056 |                 match crate::modules::oauth::refresh_access_token(&token.refresh_token).await {
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^---------------------- argument #2 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/oauth.rs:136:14
+     |
+ 136 | pub async fn refresh_access_token(refresh_token: &str, account_id: Option<&str>) -> Result<TokenResponse, String> {
+     |              ^^^^^^^^^^^^^^^^^^^^                      ------------------------
+help: provide the argument
+     |
+1056 |                 match crate::modules::oauth::refresh_access_token(&token.refresh_token, /* std::option::Option<&str> */).await {
+     |                                                                                       +++++++++++++++++++++++++++++++++
+
+error[E0308]: mismatched types
+  --> src/proxy/handlers/warmup.rs:78:16
+   |
+77 |         match state.token_manager.get_token_by_email(&req.email).await {
+   |               -------------------------------------------------------- this expression has type `Result<(String, String, String, u64), String>`
+78 |             Ok((at, pid, _, acc_id, _wait_ms)) => (at, pid, acc_id),
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected a tuple with 4 elements, found one with 5 elements
+   |
+   = note: expected tuple `(std::string::String, std::string::String, std::string::String, u64)`
+              found tuple `(_, _, _, _, _)`
+   = note: the full name for the type has been written to '/Users/viosson/AITD/1_PROJECTS/P16_TOPOO_GATEWAY/src-tauri/target/debug/deps/antigravity_tools_lib-2cf9dd1f8af88a83.long-type-5968095174915776315.txt'
+   = note: consider using `--verbose` to print the full type name to the console
+
+error[E0282]: type annotations needed
+   --> src/proxy/handlers/warmup.rs:194:76
+    |
+194 |         .call_v1_internal(method, &access_token, body.clone(), query, Some(account_id.as_str()))
+    |                                                                            ^^^^^^^^^^ cannot infer type
+
+error[E0061]: this function takes 3 arguments but 2 arguments were supplied
+    --> src/proxy/token_manager.rs:1595:15
+     |
+1595 |         match crate::modules::quota::fetch_quota(&access_token, email).await {
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^---------------------- argument #3 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/quota.rs:123:14
+     |
+ 123 | pub async fn fetch_quota(access_token: &str, email: &str, account_id: Option<&str>) -> crate::error::AppResult<(QuotaData, Option<String>...
+     |              ^^^^^^^^^^^                                  ------------------------
+help: provide the argument
+     |
+1595 |         match crate::modules::quota::fetch_quota(&access_token, email, /* std::option::Option<&str> */).await {
+     |                                                                      +++++++++++++++++++++++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/proxy/server.rs:1719:18
+     |
+1719 |     let tokens = crate::commands::user_token::list_user_tokens().await.map_err(|e| {
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/server.rs:1741:17
+     |
+1741 |     let token = crate::commands::user_token::create_user_token(payload).await.map_err(|e| {
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/server.rs:1729:19
+     |
+1729 |     let summary = crate::commands::user_token::get_user_token_summary().await.map_err(|e| {
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/server.rs:1760:5
+     |
+1760 |     crate::commands::user_token::renew_user_token(id, payload.expires_type).await.map_err(|e| {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/server.rs:1772:5
+     |
+1772 |     crate::commands::user_token::delete_user_token(id).await.map_err(|e| {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/proxy/server.rs:1785:5
+     |
+1785 |     crate::commands::user_token::update_user_token(id, payload).await.map_err(|e| {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+    --> src/proxy/token_manager.rs:1829:21
+     |
+1829 |         let token = crate::modules::oauth::refresh_access_token(refresh_token)
+     |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------- argument #2 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/oauth.rs:136:14
+     |
+ 136 | pub async fn refresh_access_token(refresh_token: &str, account_id: Option<&str>) -> Result<TokenResponse, String> {
+     |              ^^^^^^^^^^^^^^^^^^^^                      ------------------------
+help: provide the argument
+     |
+1829 |         let token = crate::modules::oauth::refresh_access_token(refresh_token, /* std::option::Option<&str> */)
+     |                                                                              +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+    --> src/proxy/token_manager.rs:1833:9
+     |
+1833 |         crate::modules::oauth::get_user_info(&token.access_token).await
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------- argument #2 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/oauth.rs:186:14
+     |
+ 186 | pub async fn get_user_info(access_token: &str, account_id: Option<&str>) -> Result<UserInfo, String> {
+     |              ^^^^^^^^^^^^^                     ------------------------
+help: provide the argument
+     |
+1833 |         crate::modules::oauth::get_user_info(&token.access_token, /* std::option::Option<&str> */).await
+     |                                                                 +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+    --> src/proxy/token_manager.rs:1839:26
+     |
+1839 |         let token_info = crate::modules::oauth::refresh_access_token(refresh_token)
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------- argument #2 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/oauth.rs:136:14
+     |
+ 136 | pub async fn refresh_access_token(refresh_token: &str, account_id: Option<&str>) -> Result<TokenResponse, String> {
+     |              ^^^^^^^^^^^^^^^^^^^^                      ------------------------
+help: provide the argument
+     |
+1839 |         let token_info = crate::modules::oauth::refresh_access_token(refresh_token, /* std::option::Option<&str> */)
+     |                                                                                   +++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+    --> src/proxy/token_manager.rs:1301:15
+     |
+1301 |         match crate::modules::oauth::refresh_access_token(&refresh_token).await {
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^---------------- argument #2 of type `std::option::Option<&str>` is missing
+     |
+note: function defined here
+    --> src/modules/oauth.rs:136:14
+     |
+ 136 | pub async fn refresh_access_token(refresh_token: &str, account_id: Option<&str>) -> Result<TokenResponse, String> {
+     |              ^^^^^^^^^^^^^^^^^^^^                      ------------------------
+help: provide the argument
+     |
+1301 |         match crate::modules::oauth::refresh_access_token(&refresh_token, /* std::option::Option<&str> */).await {
+     |                                                                         +++++++++++++++++++++++++++++++++
+
+error[E0063]: missing field `username` in initializer of `ProxyRequestLog`
+   --> src/modules/proxy_db.rs:366:20
+    |
+366 |                 Ok(ProxyRequestLog {
+    |                    ^^^^^^^^^^^^^^^ missing `username`
+
+error[E0063]: missing field `username` in initializer of `ProxyRequestLog`
+   --> src/modules/proxy_db.rs:391:20
+    |
+391 |                 Ok(ProxyRequestLog {
+    |                    ^^^^^^^^^^^^^^^ missing `username`
+
+error[E0063]: missing field `username` in initializer of `ProxyRequestLog`
+   --> src/modules/proxy_db.rs:416:20
+    |
+416 |                 Ok(ProxyRequestLog {
+    |                    ^^^^^^^^^^^^^^^ missing `username`
+
+error[E0063]: missing field `username` in initializer of `ProxyRequestLog`
+   --> src/modules/proxy_db.rs:458:16
+    |
+458 |             Ok(ProxyRequestLog {
+    |                ^^^^^^^^^^^^^^^ missing `username`
+
+error[E0282]: type annotations needed
+  --> src/modules/log_bridge.rs:60:46
+   |
+60 |             let _ = handle.emit("log-event", entry.clone());
+   |                                              ^^^^^ cannot infer type
+
+warning: unused variable: `account_id`
+   --> src/modules/quota.rs:282:5
+    |
+282 |     account_id: Option<&str>,
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_account_id`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `id`
+    --> src/proxy/server.rs:1521:10
+     |
+1521 |     Path(id): Path<String>,
+     |          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `state`
+    --> src/proxy/server.rs:3256:11
+     |
+3256 |     State(state): State<AppState>,
+     |           ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
+
+warning: unused variable: `schema`
+  --> src/proxy/common/tool_adapter.rs:26:27
+   |
+26 |     fn pre_process(&self, schema: &mut Value) -> Result<(), String> {
+   |                           ^^^^^^ help: if this is intentional, prefix it with an underscore: `_schema`
+
+warning: unused variable: `schema`
+  --> src/proxy/common/tool_adapter.rs:39:28
+   |
+39 |     fn post_process(&self, schema: &mut Value) -> Result<(), String> {
+   |                            ^^^^^^ help: if this is intentional, prefix it with an underscore: `_schema`
+
+Some errors have detailed explanations: E0061, E0063, E0282, E0308, E0425, E0432, E0433, E0599.
+For more information about an error, try `rustc --explain E0061`.
+warning: `antigravity_tools` (lib) generated 18 warnings
+error: could not compile `antigravity_tools` (lib) due to 73 previous errors; 18 warnings emitted

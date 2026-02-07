@@ -411,7 +411,7 @@ pub async fn handle_messages(
             &tools_val,
             request.size.as_deref(),      // [NEW] Pass size parameter
             request.quality.as_deref(),   // [NEW] Pass quality parameter
-            None,  // Claude handler uses transform_claude_request_in for image gen
+            None,                         // body (not needed for Claude protocol)
         );
 
         // 0. 尝试提取 session_id 用于粘性调度 (Phase 2/3)
@@ -776,7 +776,7 @@ pub async fn handle_messages(
                 // [FIX #530/#529/#859] Enhanced Peek logic to handle heartbeats and slow start
                 // We must pre-read until we find a MEANINGFUL content block (like message_start).
                 // If we only get heartbeats (ping) and then the stream dies, we should rotate account.
-                let mut claude_stream = create_claude_sse_stream(
+                let mut claude_stream = crate::proxy::mappers::claude::create_claude_sse_stream(
                     gemini_stream,
                     trace_id.clone(),
                     email.clone(),
@@ -785,7 +785,7 @@ pub async fn handle_messages(
                     context_limit,
                     Some(raw_estimated), // [FIX] Pass estimated tokens for calibrator learning
                     current_message_count, // [NEW v4.0.0] Pass message count for rewind detection
-                    client_adapter.clone(), // [NEW] Pass client adapter
+                    None, // client_adapter (not needed here)
                 );
 
                 let mut first_data_chunk = None;
@@ -1581,7 +1581,7 @@ async fn call_gemini_sync(
     trace_id: &str,
 ) -> Result<String, String> {
     // Get token and transform request
-    let (access_token, project_id, _, _, _wait_ms) = token_manager
+    let (access_token, project_id, email, account_id, _wait_ms) = token_manager
         .get_token("gemini", false, None, model)
         .await
         .map_err(|e| format!("Failed to get account: {}", e))?;
