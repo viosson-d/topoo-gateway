@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { RefreshCw, Zap, Layers, TrendingUp, Users, Cpu, PieChart as PieChartIcon } from "lucide-react";
+import { RefreshCw, Zap, Layers, TrendingUp, Users, Cpu, PieChart as PieChartIcon, Database } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import {
@@ -156,6 +156,25 @@ const TokenStats: React.FC = () => {
         fetchData();
     }, [timeRange]);
 
+    const [rebuilding, setRebuilding] = useState(false);
+
+    const rebuildStats = async () => {
+        if (!confirm(t('token_stats.confirm_rebuild', 'This will scan all proxy logs and rebuild token statistics. This may take a while. Continue?'))) {
+            return;
+        }
+        setRebuilding(true);
+        try {
+            const count = await invoke<number>('rebuild_token_stats');
+            alert(t('token_stats.rebuild_success', `Successfully rebuilt statistics from ${count} logs.`));
+            fetchData();
+        } catch (error) {
+            console.error('Failed to rebuild stats:', error);
+            alert(t('token_stats.rebuild_error', 'Failed to rebuild statistics. Check console for details.'));
+        } finally {
+            setRebuilding(false);
+        }
+    };
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -262,13 +281,24 @@ const TokenStats: React.FC = () => {
                         </TabsList>
                     </Tabs>
 
-                    <button
-                        onClick={fetchData}
-                        disabled={loading}
-                        className="h-7 w-7 flex items-center justify-center p-0 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg transition-all active:scale-95 border border-transparent hover:border-border/40"
-                    >
-                        <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground/35", loading && "animate-spin")} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={rebuildStats}
+                            disabled={rebuilding || loading}
+                            title={t('token_stats.rebuild', 'Rebuild Statistics from Logs')}
+                            className="h-7 w-7 flex items-center justify-center p-0 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg transition-all active:scale-95 border border-transparent hover:border-border/40 text-muted-foreground hover:text-foreground"
+                        >
+                            <Database className={cn("w-3.5 h-3.5", rebuilding && "animate-pulse")} />
+                        </button>
+                        <button
+                            onClick={fetchData}
+                            disabled={loading || rebuilding}
+                            title={t('common.refresh', 'Refresh')}
+                            className="h-7 w-7 flex items-center justify-center p-0 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg transition-all active:scale-95 border border-transparent hover:border-border/40"
+                        >
+                            <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground/70", loading && "animate-spin")} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -277,7 +307,7 @@ const TokenStats: React.FC = () => {
                 {/* Summary Cards */}
                 {summary && (
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200 border-border/40 dark:border-zinc-800/50">
                             <div className="flex items-center gap-2 text-muted-foreground mb-2">
                                 <div className="p-1.5 rounded-md bg-muted">
                                     <Zap className="w-3.5 h-3.5 text-foreground" strokeWidth={1.5} />
@@ -297,7 +327,7 @@ const TokenStats: React.FC = () => {
                             <div className="text-[20px] font-semibold text-blue-700 dark:text-blue-400">{summary.total_requests.toLocaleString()}</div>
                         </Card>
 
-                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200 border-border/40 dark:border-zinc-800/50">
                             <div className="flex items-center gap-2 text-purple-600/90 dark:text-purple-400 mb-2">
                                 <div className="p-1.5 rounded-md bg-purple-100/50 dark:bg-purple-900/30">
                                     <TrendingUp className="w-3.5 h-3.5 rotate-180" strokeWidth={1.5} />
@@ -307,7 +337,7 @@ const TokenStats: React.FC = () => {
                             <div className="text-[20px] font-semibold text-purple-700 dark:text-purple-400">{formatNumber(summary.total_input_tokens)}</div>
                         </Card>
 
-                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200 border-border/40 dark:border-zinc-800/50">
                             <div className="flex items-center gap-2 text-green-600/90 dark:text-green-400 mb-2">
                                 <div className="p-1.5 rounded-md bg-green-100/50 dark:bg-green-900/30">
                                     <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -317,7 +347,7 @@ const TokenStats: React.FC = () => {
                             <div className="text-[20px] font-semibold text-green-700 dark:text-green-400">{summary.unique_accounts}</div>
                         </Card>
 
-                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <Card className="p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200 border-border/40 dark:border-zinc-800/50">
                             <div className="flex items-center gap-2 text-orange-600/90 dark:text-orange-400 mb-2">
                                 <div className="p-1.5 rounded-md bg-orange-100/50 dark:bg-orange-900/30">
                                     <Cpu className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -332,7 +362,7 @@ const TokenStats: React.FC = () => {
                 {/* Main Charts Area */}
                 <div className="grid grid-cols-1 gap-6">
                     {/* Trend Chart */}
-                    <Card className="col-span-1 shadow-sm">
+                    <Card className="bg-white/50 dark:bg-white/[0.02] border border-codmate-border dark:border-codmate-border-dark rounded-codmate shadow-codmate">
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <div className="flex flex-col gap-0.5">
                                 <CardTitle className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug">
@@ -421,7 +451,7 @@ const TokenStats: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
                     {/* Usage Bar Chart */}
-                    <Card className="lg:col-span-2 shadow-sm">
+                    <Card className="lg:col-span-2 bg-white/50 dark:bg-white/[0.02] border border-codmate-border dark:border-codmate-border-dark rounded-codmate shadow-codmate">
                         <CardHeader className="pb-2">
                             <div className="flex flex-col gap-0.5">
                                 <CardTitle className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug">
@@ -483,7 +513,7 @@ const TokenStats: React.FC = () => {
                     </Card>
 
                     {/* Distribution Pie Chart */}
-                    <Card className="shadow-sm">
+                    <Card className="bg-white/50 dark:bg-white/[0.02] border border-codmate-border dark:border-codmate-border-dark rounded-codmate shadow-codmate">
                         <CardHeader className="pb-2">
                             <div className="flex flex-col gap-0.5">
                                 <CardTitle className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug">
@@ -552,7 +582,7 @@ const TokenStats: React.FC = () => {
 
                 {/* Detailed Table Section */}
                 {viewMode === 'model' && modelData.length > 0 && (
-                    <Card className="shadow-sm">
+                    <Card className="bg-white/50 dark:bg-white/[0.02] border border-codmate-border dark:border-codmate-border-dark rounded-codmate shadow-codmate">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug flex items-center gap-2">
                                 <Cpu className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
@@ -617,7 +647,7 @@ const TokenStats: React.FC = () => {
                 )}
 
                 {viewMode === 'account' && accountData.length > 0 && (
-                    <Card className="shadow-sm">
+                    <Card className="bg-white/50 dark:bg-white/[0.02] border border-codmate-border dark:border-codmate-border-dark rounded-codmate shadow-codmate">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-[13px] font-medium text-foreground/90 tracking-tight leading-snug flex items-center gap-2">
                                 <Users className="w-3.5 h-3.5 text-green-600 dark:text-green-500" strokeWidth={1.5} />

@@ -213,8 +213,8 @@ export const useActivityStore = create<ActivityState>()(
                     // Fetch last 24 hours
                     trendData = await invoke('get_token_stats_model_trend_hourly', { hours: 24 });
                 } else {
-                    // Fetch last 14 days
-                    trendData = await invoke('get_token_stats_model_trend_daily', { days: 14 });
+                    // Fetch last 30 days
+                    trendData = await invoke('get_token_stats_model_trend_daily', { days: 30 });
                 }
 
                 const history: DailyUsage[] = trendData.map(point => {
@@ -275,36 +275,49 @@ export const useActivityStore = create<ActivityState>()(
                 const { listen } = await import('@tauri-apps/api/event');
                 console.log('[Store] Event API loaded dynamically');
 
+                // THROTTLING IMPLEMENTATION
+                // Buffer for incoming turns to avoid spamming state updates and freezing the UI
+                let pendingTurns: CommunicationTurn[] = [];
+                let flushInterval: ReturnType<typeof setInterval> | null = null;
+
+                const processBuffer = () => {
+                    if (pendingTurns.length === 0) return;
+
+                    const batch = [...pendingTurns];
+                    pendingTurns = []; // Clear buffer immediately
+
+                    set((state) => {
+                        // Filter out duplicates that might already be in state
+                        const uniqueNewTurns = batch.filter(newTurn =>
+                            !state.turns.some(existing => existing.id === newTurn.id)
+                        );
+
+                        if (uniqueNewTurns.length === 0) return state;
+
+                        // Batch contains items in chronological order [Older, Newer]
+                        // We want to display [Newer, Older, ...Existing]
+                        const reversedBatch = [...uniqueNewTurns].reverse();
+                        const updatedTurns = [...reversedBatch, ...state.turns].slice(0, 50);
+
+                        return { turns: updatedTurns };
+                    });
+                };
+
+                // Flush buffer every 1 second
+                flushInterval = setInterval(processBuffer, 1000);
+
                 const handler = (event: any) => {
-                    console.log('[Store] Received realtime log (raw):', event);
+                    // console.log('[Store] Received realtime log (raw):', event);
                     try {
                         const payload = event.payload;
-                        if (!payload) {
-                            console.warn('[Store] Received empty payload');
-                            return;
-                        }
+                        if (!payload) return;
 
-                        // console.log('[Store] Processing payload:', payload); 
-                        // Reduce console spam
                         const newTurn = mapLogToTurn(payload);
-
-                        // If mapLogToTurn returned null (e.g. invalid debug event), ignore it
                         if (!newTurn) return;
 
-                        set((state) => {
-                            // Check for duplicates
-                            if (state.turns.some(t => t.id === newTurn.id)) {
-                                return state;
-                            }
-                            // Prepend new turn and limit to 50
-                            const updatedTurns = [newTurn, ...state.turns].slice(0, 50);
-                            return { turns: updatedTurns };
-                        });
+                        // Push to buffer instead of setting state directly
+                        pendingTurns.push(newTurn);
 
-                        // Also refresh usage history to update the chart
-                        get().fetchUsageHistory().catch((err: unknown) =>
-                            console.error('[Store] Auto-refresh usage history failed:', err)
-                        );
                     } catch (innerErr) {
                         console.error('[Store] Error processing event payload:', innerErr);
                     }
@@ -319,6 +332,7 @@ export const useActivityStore = create<ActivityState>()(
                 return () => {
                     unlistenStandard();
                     unlistenSimple();
+                    if (flushInterval) clearInterval(flushInterval);
                 };
             } catch (err) {
                 console.error('[Store] Failed to setup event listener:', err);

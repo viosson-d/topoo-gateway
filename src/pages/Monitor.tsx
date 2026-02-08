@@ -57,7 +57,7 @@ const Monitor: React.FC = () => {
                     {isLoggingEnabled ? t('monitor.logging_status.active') : t('monitor.logging_status.paused')}
                 </Button>
             </PageHeader>
-            <div className="flex-1 bg-card rounded-xl border shadow-sm overflow-hidden mb-6">
+            <div className="flex-1 bg-white/50 dark:bg-white/[0.02] rounded-codmate border border-codmate-border dark:border-codmate-border-dark shadow-codmate overflow-hidden mb-6">
                 <ProxyMonitor
                     className="h-full rounded-none border-0 shadow-none"
                     isLoggingEnabled={isLoggingEnabled}

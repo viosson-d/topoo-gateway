@@ -15,7 +15,6 @@ import { Card } from '../ui/card';
 
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
 import { Checkbox } from '../ui/checkbox';
 import {
     Table,
@@ -32,6 +31,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
+import { PremiumProgressRow } from '../ui/premium-progress-row';
 import { cn } from '../../lib/utils';
 import { showToast } from '../common/ToastContainer';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -165,8 +165,9 @@ export function AccountManagement({ className }: AccountManagementProps) {
                                     className="translate-y-[1px] opacity-50 data-[state=checked]:opacity-100 transition-opacity h-3 w-3"
                                 />
                             </TableHead>
-                            <TableHead className="w-[280px] text-[10px] font-medium text-muted-foreground pl-2 !h-7">{t('accounts.table.email')}</TableHead>
+                            <TableHead className="w-[25%] text-[10px] font-medium text-muted-foreground pl-2 !h-7">{t('accounts.table.email')}</TableHead>
                             <TableHead className="text-[10px] font-medium text-muted-foreground !h-7">{t('accounts.table.quota')}</TableHead>
+                            <TableHead className="w-[100px] text-[10px] font-medium text-muted-foreground !h-7 whitespace-nowrap">{t('accounts.table.last_used', 'Last Used')}</TableHead>
                             <TableHead className="w-[90px] text-right pr-3 text-[10px] font-medium text-muted-foreground !h-7">{t('accounts.table.actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -181,7 +182,8 @@ export function AccountManagement({ className }: AccountManagementProps) {
                             return (
                                 <TableRow key={account.id} className={cn(
                                     "group transition-all duration-300 border-border/40 !h-10",
-                                    isCurrent ? "bg-blue-50/40 dark:bg-blue-900/10 hover:bg-blue-50/60 shadow-[inset_2px_0_0_0_#3b82f6]" : "hover:bg-zinc-50/80 dark:hover:bg-muted/10",
+                                    "group transition-all duration-300 border-border/40 !h-10",
+                                    isCurrent ? "bg-zinc-100/50 dark:bg-zinc-800/50 hover:bg-zinc-100/80 shadow-[inset_2px_0_0_0_currentColor] text-foreground" : "hover:bg-zinc-50/80 dark:hover:bg-muted/10",
                                     isSelected && "bg-muted/40",
                                     account.disabled && "opacity-60 grayscale-[0.8] select-none"
                                 )}>
@@ -196,11 +198,11 @@ export function AccountManagement({ className }: AccountManagementProps) {
                                         <div className="flex items-center gap-2 h-full">
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <span className={cn(
-                                                    "font-medium text-[11px] tracking-tight truncate max-w-[160px]",
-                                                    isCurrent ? "text-blue-600 dark:text-blue-400" : "text-foreground"
+                                                    "font-medium text-[11px] tracking-tight truncate",
+                                                    isCurrent ? "text-foreground font-semibold" : "text-foreground"
                                                 )}>{account.email}</span>
                                                 {isCurrent && (
-                                                    <CheckCircle2 className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                                                    <CheckCircle2 className="h-2.5 w-2.5 text-foreground flex-shrink-0" />
                                                 )}
                                             </div>
 
@@ -223,36 +225,65 @@ export function AccountManagement({ className }: AccountManagementProps) {
                                         </div>
                                     </TableCell>
                                     <TableCell className="!py-0">
-                                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-x-3 gap-y-0.5 !py-0.5">
-                                            {account.quota?.models?.slice(0, 4).map(model => (
-                                                <div key={model.name} className="flex items-center gap-1.5">
-                                                    <span className="text-[9px] font-medium text-muted-foreground/80 truncate w-12 flex-shrink-0">
-                                                        {getModelDisplayName(model.name)}
-                                                    </span>
-                                                    <Progress
+                                        <div className="grid grid-cols-2 xl:grid-cols-2 gap-x-3 gap-y-1.5 !py-1">
+                                            {account.quota?.models?.slice(0, 4).map(model => {
+                                                return (
+                                                    <PremiumProgressRow
+                                                        key={model.name}
                                                         value={model.percentage}
-                                                        className="h-1 flex-1 bg-muted/40 min-w-[40px]"
-                                                        indicatorClassName={cn(
-                                                            "transition-all duration-500",
-                                                            model.percentage > 80 ? "bg-green-500" :
-                                                                model.percentage > 40 ? "bg-orange-500" : "bg-red-500"
-                                                        )}
+                                                        label={getModelDisplayName(model.name)}
+                                                        valueLabel={
+                                                            <div className="flex items-center gap-1.5">
+                                                                {model.reset_time && (
+                                                                    <span className="text-[9px] font-normal opacity-70">
+                                                                        {formatResetTime(model.reset_time)}
+                                                                    </span>
+                                                                )}
+                                                                <span>{model.percentage}%</span>
+                                                            </div>
+                                                        }
+                                                        barColor={model.percentage > 40 ? "bg-secondary" : "bg-orange-100 dark:bg-orange-900/40"}
+                                                        className="h-6 px-2 border border-border/20 bg-muted/20"
                                                     />
-                                                    <span className={cn(
-                                                        "text-[9px] tabular-nums w-6 text-right",
-                                                        getQuotaColor(model.percentage)
-                                                    )}>
-                                                        {model.percentage}%
-                                                    </span>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                             {(!account.quota?.models || account.quota.models.length === 0) && (
-                                                <div className="col-span-full h-4 flex items-center gap-2 px-0 text-muted-foreground/40">
+                                                <div className="col-span-full h-6 flex items-center justify-center text-muted-foreground/40 border border-border/20 rounded-sm bg-muted/10">
                                                     <span className="text-[9px]">
                                                         {t('common.no_data', 'No Data')}
                                                     </span>
                                                 </div>
                                             )}
+                                        </div>
+
+                                    </TableCell>
+                                    <TableCell className="!py-0">
+                                        <div className="flex flex-col justify-center h-full">
+                                            {(() => {
+                                                const lastUsed = account.last_used ? (account.last_used < 10000000000 ? account.last_used * 1000 : account.last_used) : 0;
+                                                // Check if valid (after 2023-01-01)
+                                                if (lastUsed > 1672531200000) {
+                                                    return (
+                                                        <>
+                                                            <span className="text-[10px] font-medium text-foreground/80 tabular-nums">
+                                                                {new Date(lastUsed).toLocaleDateString(undefined, {
+                                                                    year: 'numeric',
+                                                                    month: 'numeric',
+                                                                    day: 'numeric'
+                                                                })}
+                                                            </span>
+                                                            <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+                                                                {new Date(lastUsed).toLocaleTimeString(undefined, {
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })}
+                                                            </span>
+                                                        </>
+                                                    );
+                                                }
+                                                return <span className="text-[10px] text-muted-foreground/30">-</span>;
+                                            })()}
+
                                         </div>
                                     </TableCell>
                                     <TableCell className="pr-4 !py-0 text-right w-[60px]">
@@ -420,12 +451,14 @@ export function AccountManagement({ className }: AccountManagementProps) {
                     </div>
                 )
             }
-            {fingerprintAccount && (
-                <DeviceFingerprintDialog
-                    account={fingerprintAccount}
-                    onClose={() => setFingerprintAccount(null)}
-                />
-            )}
+            {
+                fingerprintAccount && (
+                    <DeviceFingerprintDialog
+                        account={fingerprintAccount}
+                        onClose={() => setFingerprintAccount(null)}
+                    />
+                )
+            }
         </Card >
     );
 }
@@ -433,12 +466,13 @@ export function AccountManagement({ className }: AccountManagementProps) {
 // Helpers
 function getModelDisplayName(fullName: string): string {
     const nameMap: Record<string, string> = {
-        'gemini-1.5-pro': 'G1.5 Pro',
-        'gemini-1.5-flash': 'G1.5 Flash',
-        'gemini-pro-vision': 'G Pro Vision',
-        'claude-3-opus': 'C3 Opus',
-        'claude-3-sonnet': 'C3 Sonnet',
-        'claude-3-haiku': 'C3 Haiku',
+        'gemini-1.5-pro': 'Pro 1.5',
+        'gemini-1.5-flash': 'Flash 1.5',
+        'gemini-pro-vision': 'Pro Vision',
+        'claude-3-opus': 'Opus 3',
+        'claude-3-sonnet': 'Sonnet 3',
+        'claude-3-haiku': 'Haiku 3',
+        'claude-3.5-sonnet': 'Sonnet 3.5',
     };
 
     for (const [key, val] of Object.entries(nameMap)) {
@@ -447,8 +481,28 @@ function getModelDisplayName(fullName: string): string {
     return fullName.split('/').pop() || fullName;
 }
 
-function getQuotaColor(percentage: number): string {
-    if (percentage > 80) return 'text-green-500';
-    if (percentage > 40) return 'text-orange-500';
-    return 'text-red-500';
+function formatResetTime(isoString: string): string {
+    try {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return isoString; // Return original if not valid date
+
+        const now = new Date();
+        const diffMs = date.getTime() - now.getTime();
+
+        if (diffMs <= 0) return ''; // Already passed
+
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (hours > 48) return Math.ceil(hours / 24) + 'd';
+        if (hours > 0) return `${hours}h`;
+        return `${minutes}m`;
+    } catch (e) {
+        return '';
+    }
 }
+
+
+
+

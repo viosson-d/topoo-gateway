@@ -2,10 +2,12 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useActivityStore } from "../../stores/useActivityStore";
 import { cn } from "../../lib/utils";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 
 export function UsageChart() {
     const { i18n } = useTranslation();
     const { usageHistory, granularity, setGranularity } = useActivityStore();
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
     const formatDate = (dateStr: string) => {
         try {
@@ -25,9 +27,9 @@ export function UsageChart() {
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-white/95 dark:bg-zinc-900/95 border border-border/40 rounded-xl shadow-xl p-3 text-[11px] min-w-[140px] font-sans backdrop-blur-md">
-                    <p className="font-medium text-muted-foreground/60 mb-1.5 border-b border-border/5 pb-1.5 tracking-tight">{formatDate(label)}</p>
-                    <div className="space-y-1.5">
+                <div className="bg-white/95 dark:bg-zinc-900/95 border border-border/40 rounded-xl shadow-xl px-2.5 py-1.5 text-[11px] min-w-[140px] font-sans backdrop-blur-md">
+                    <p className="font-medium text-muted-foreground/60 border-b border-border/5 pb-0.5 tracking-tight">{formatDate(label)}</p>
+                    <div className="space-y-1 pt-1">
                         {payload.map((entry: any, index: number) => (
                             <div key={index} className="flex items-center justify-between gap-3">
                                 <span className="flex items-center gap-1.5 text-foreground/80 font-medium">
@@ -98,7 +100,7 @@ export function UsageChart() {
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={usageHistory} margin={{ top: 10, right: 0, left: -20, bottom: 20 }}>
+                        <AreaChart data={usageHistory} margin={{ top: 10, right: 30, left: -20, bottom: 20 }}>
                             <defs>
                                 <linearGradient id="colorGemini" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
@@ -111,15 +113,70 @@ export function UsageChart() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
                             <XAxis
-                                dataKey="date" // This is actually the bucket string (e.g. "2023-10-27 10:00")
+                                dataKey="date"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 11, fill: 'currentColor', fontWeight: 500 }}
+                                tick={granularity === 'minute' ?
+                                    (props: any) => {
+                                        const { x, y, index, payload } = props;
+                                        const isHovered = hoveredIndex === index;
+                                        return (
+                                            <g
+                                                onMouseEnter={() => setHoveredIndex(index)}
+                                                onMouseLeave={() => setHoveredIndex(null)}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                {/* 透明悬停热区 */}
+                                                <rect
+                                                    x={x - 8}
+                                                    y={y - 150}
+                                                    width={16}
+                                                    height={175}
+                                                    fill="transparent"
+                                                    style={{ pointerEvents: 'all' }}
+                                                />
+                                                <line
+                                                    x1={x}
+                                                    y1={y - 150}
+                                                    x2={x}
+                                                    y2={y + 10}
+                                                    stroke="hsl(var(--border))"
+                                                    strokeWidth={isHovered ? 1.5 : 0.5}
+                                                    opacity={isHovered ? 0.5 : 0.15}
+                                                    style={{ pointerEvents: 'none' }}
+                                                />
+                                                <circle
+                                                    cx={x}
+                                                    cy={y + 10}
+                                                    r={isHovered ? 2.5 : 1.5}
+                                                    fill="hsl(var(--muted-foreground))"
+                                                    opacity={isHovered ? 0.8 : 0.3}
+                                                    style={{ pointerEvents: 'none' }}
+                                                />
+                                                {isHovered && (
+                                                    <text
+                                                        x={x}
+                                                        y={y + 25}
+                                                        textAnchor="middle"
+                                                        fontSize={10}
+                                                        fill="hsl(var(--foreground))"
+                                                        fontWeight={500}
+                                                        style={{ pointerEvents: 'none' }}
+                                                    >
+                                                        {formatDate(payload.value)}
+                                                    </text>
+                                                )}
+                                            </g>
+                                        );
+                                    } :
+                                    { fontSize: 11, fill: 'currentColor', fontWeight: 500 }
+                                }
                                 className="text-muted-foreground/30"
                                 dy={10}
-                                tickFormatter={formatDate}
+                                tickFormatter={granularity === 'minute' ? () => '' : formatDate}
+                                interval={granularity === 'minute' ? 0 : 'preserveStartEnd'}
                             />
-                            <YAxis hide />
+                            <YAxis hide domain={[0, 'auto']} />
                             <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(0,0,0,0.05)', strokeWidth: 1 }} />
                             <Area
                                 stackId="1"

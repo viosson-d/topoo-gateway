@@ -1,6 +1,6 @@
-use tauri::State;
-use serde::{Deserialize, Serialize};
 use crate::modules::security_db;
+use serde::{Deserialize, Serialize};
+use tauri::State;
 
 // ==================== 请求/响应结构 ====================
 
@@ -43,42 +43,50 @@ pub struct IpStatsResponse {
 
 /// 获取 IP 访问日志列表
 #[tauri::command]
-pub async fn get_ip_access_logs(
-    query: IpAccessLogQuery,
-) -> Result<IpAccessLogResponse, String> {
-    let offset = (query.page.max(1) - 1) * query.page_size;
-    
-    let logs = security_db::get_ip_access_logs(
-        query.page_size,
-        offset,
-        query.search.as_deref(),
-        query.blocked_only,
-    )?;
-    
-    // 简单计算总数 (如果需要精确分页,可以添加 count 函数)
-    let total = logs.len();
-    
-    Ok(IpAccessLogResponse { logs, total })
+pub async fn get_ip_access_logs(query: IpAccessLogQuery) -> Result<IpAccessLogResponse, String> {
+    tokio::task::spawn_blocking(move || {
+        let offset = (query.page.max(1) - 1) * query.page_size;
+
+        let logs = security_db::get_ip_access_logs(
+            query.page_size,
+            offset,
+            query.search.as_deref(),
+            query.blocked_only,
+        )?;
+
+        // 简单计算总数 (如果需要精确分页,可以添加 count 函数)
+        let total = logs.len();
+
+        Ok(IpAccessLogResponse { logs, total })
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 获取 IP 统计信息
 #[tauri::command]
 pub async fn get_ip_stats() -> Result<IpStatsResponse, String> {
-    let stats = security_db::get_ip_stats()?;
-    let top_ips = security_db::get_top_ips(10, 24)?; // Top 10 IPs in last 24 hours
-    
-    Ok(IpStatsResponse {
-        total_requests: stats.total_requests as usize,
-        unique_ips: stats.unique_ips as usize,
-        blocked_requests: stats.blocked_count as usize,
-        top_ips,
+    tokio::task::spawn_blocking(|| {
+        let stats = security_db::get_ip_stats()?;
+        let top_ips = security_db::get_top_ips(10, 24)?; // Top 10 IPs in last 24 hours
+
+        Ok(IpStatsResponse {
+            total_requests: stats.total_requests as usize,
+            unique_ips: stats.unique_ips as usize,
+            blocked_requests: stats.blocked_count as usize,
+            top_ips,
+        })
     })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 清空 IP 访问日志
 #[tauri::command]
 pub async fn clear_ip_access_logs() -> Result<(), String> {
-    security_db::clear_ip_access_logs()
+    tokio::task::spawn_blocking(|| security_db::clear_ip_access_logs())
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 // ==================== IP 黑名单命令 ====================
@@ -86,57 +94,74 @@ pub async fn clear_ip_access_logs() -> Result<(), String> {
 /// 获取 IP 黑名单列表
 #[tauri::command]
 pub async fn get_ip_blacklist() -> Result<Vec<security_db::IpBlacklistEntry>, String> {
-    security_db::get_blacklist()
+    tokio::task::spawn_blocking(|| security_db::get_blacklist())
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// 添加 IP 到黑名单
 #[tauri::command]
-pub async fn add_ip_to_blacklist(
-    request: AddBlacklistRequest,
-) -> Result<(), String> {
+pub async fn add_ip_to_blacklist(request: AddBlacklistRequest) -> Result<(), String> {
     // 验证 IP 格式
     if !is_valid_ip_pattern(&request.ip_pattern) {
-        return Err("Invalid IP pattern. Use IP address or CIDR notation (e.g., 192.168.1.0/24)".to_string());
+        return Err(
+            "Invalid IP pattern. Use IP address or CIDR notation (e.g., 192.168.1.0/24)"
+                .to_string(),
+        );
     }
-    
-    security_db::add_to_blacklist(
-        &request.ip_pattern,
-        request.reason.as_deref(),
-        request.expires_at,
-        "manual",
-    )?;
+
+    tokio::task::spawn_blocking(move || {
+        security_db::add_to_blacklist(
+            &request.ip_pattern,
+            request.reason.as_deref(),
+            request.expires_at,
+            "manual",
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     Ok(())
 }
 
 /// 从黑名单移除 IP
 #[tauri::command]
 pub async fn remove_ip_from_blacklist(ip_pattern: String) -> Result<(), String> {
-    // 先获取黑名单列表，找到对应的id
-    let entries = security_db::get_blacklist()?;
-    let entry = entries.iter().find(|e| e.ip_pattern == ip_pattern);
-    
-    if let Some(entry) = entry {
-        security_db::remove_from_blacklist(&entry.id)
-    } else {
-        Err(format!("IP pattern {} not found in blacklist", ip_pattern))
-    }
+    tokio::task::spawn_blocking(move || {
+        // 先获取黑名单列表，找到对应的id
+        let entries = security_db::get_blacklist()?;
+        let entry = entries.iter().find(|e| e.ip_pattern == ip_pattern);
+
+        if let Some(entry) = entry {
+            security_db::remove_from_blacklist(&entry.id)
+        } else {
+            Err(format!("IP pattern {} not found in blacklist", ip_pattern))
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 清空黑名单
 #[tauri::command]
 pub async fn clear_ip_blacklist() -> Result<(), String> {
-    // 获取所有黑名单条目并逐个删除
-    let entries = security_db::get_blacklist()?;
-    for entry in entries {
-        security_db::remove_from_blacklist(&entry.ip_pattern)?;
-    }
-    Ok(())
+    tokio::task::spawn_blocking(|| {
+        // 获取所有黑名单条目并逐个删除
+        let entries = security_db::get_blacklist()?;
+        for entry in entries {
+            security_db::remove_from_blacklist(&entry.ip_pattern)?;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 检查 IP 是否在黑名单中
 #[tauri::command]
 pub async fn check_ip_in_blacklist(ip: String) -> Result<bool, String> {
-    security_db::is_ip_in_blacklist(&ip)
+    tokio::task::spawn_blocking(move || security_db::is_ip_in_blacklist(&ip))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 // ==================== IP 白名单命令 ====================
@@ -144,55 +169,69 @@ pub async fn check_ip_in_blacklist(ip: String) -> Result<bool, String> {
 /// 获取 IP 白名单列表
 #[tauri::command]
 pub async fn get_ip_whitelist() -> Result<Vec<security_db::IpWhitelistEntry>, String> {
-    security_db::get_whitelist()
+    tokio::task::spawn_blocking(|| security_db::get_whitelist())
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// 添加 IP 到白名单
 #[tauri::command]
-pub async fn add_ip_to_whitelist(
-    request: AddWhitelistRequest,
-) -> Result<(), String> {
+pub async fn add_ip_to_whitelist(request: AddWhitelistRequest) -> Result<(), String> {
     // 验证 IP 格式
     if !is_valid_ip_pattern(&request.ip_pattern) {
-        return Err("Invalid IP pattern. Use IP address or CIDR notation (e.g., 192.168.1.0/24)".to_string());
+        return Err(
+            "Invalid IP pattern. Use IP address or CIDR notation (e.g., 192.168.1.0/24)"
+                .to_string(),
+        );
     }
-    
-    security_db::add_to_whitelist(
-        &request.ip_pattern,
-        request.description.as_deref(),
-    )?;
+
+    tokio::task::spawn_blocking(move || {
+        security_db::add_to_whitelist(&request.ip_pattern, request.description.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     Ok(())
 }
 
 /// 从白名单移除 IP
 #[tauri::command]
 pub async fn remove_ip_from_whitelist(ip_pattern: String) -> Result<(), String> {
-    // 先获取白名单列表，找到对应的id
-    let entries = security_db::get_whitelist()?;
-    let entry = entries.iter().find(|e| e.ip_pattern == ip_pattern);
-    
-    if let Some(entry) = entry {
-        security_db::remove_from_whitelist(&entry.id)
-    } else {
-        Err(format!("IP pattern {} not found in whitelist", ip_pattern))
-    }
+    tokio::task::spawn_blocking(move || {
+        // 先获取白名单列表，找到对应的id
+        let entries = security_db::get_whitelist()?;
+        let entry = entries.iter().find(|e| e.ip_pattern == ip_pattern);
+
+        if let Some(entry) = entry {
+            security_db::remove_from_whitelist(&entry.id)
+        } else {
+            Err(format!("IP pattern {} not found in whitelist", ip_pattern))
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 清空白名单
 #[tauri::command]
 pub async fn clear_ip_whitelist() -> Result<(), String> {
-    // 获取所有白名单条目并逐个删除
-    let entries = security_db::get_whitelist()?;
-    for entry in entries {
-        security_db::remove_from_whitelist(&entry.ip_pattern)?;
-    }
-    Ok(())
+    tokio::task::spawn_blocking(|| {
+        // 获取所有白名单条目并逐个删除
+        let entries = security_db::get_whitelist()?;
+        for entry in entries {
+            security_db::remove_from_whitelist(&entry.ip_pattern)?;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 检查 IP 是否在白名单中
 #[tauri::command]
 pub async fn check_ip_in_whitelist(ip: String) -> Result<bool, String> {
-    security_db::is_ip_in_whitelist(&ip)
+    tokio::task::spawn_blocking(move || security_db::is_ip_in_whitelist(&ip))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 // ==================== 安全配置命令 ====================
@@ -208,10 +247,14 @@ pub async fn get_security_config(
         return Ok(instance.config.security_monitor.clone());
     }
 
-    // 2. 如果服务未运行，从磁盘加载
-    let app_config = crate::modules::config::load_app_config()
-        .map_err(|e| format!("Failed to load config: {}", e))?;
-    Ok(app_config.proxy.security_monitor)
+    tokio::task::spawn_blocking(|| {
+        // 2. 如果服务未运行，从磁盘加载
+        let app_config = crate::modules::config::load_app_config()
+            .map_err(|e| format!("Failed to load config: {}", e))?;
+        Ok(app_config.proxy.security_monitor)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 更新安全监控配置
@@ -220,12 +263,17 @@ pub async fn update_security_config(
     config: crate::proxy::config::SecurityMonitorConfig,
     app_state: State<'_, crate::commands::proxy::ProxyServiceState>,
 ) -> Result<(), String> {
-    // 1. 同步保存到配置文件
-    let mut app_config = crate::modules::config::load_app_config()
-        .map_err(|e| format!("Failed to load config: {}", e))?;
-    app_config.proxy.security_monitor = config.clone();
-    crate::modules::config::save_app_config(&app_config)
-        .map_err(|e| format!("Failed to save config: {}", e))?;
+    let config_clone = config.clone();
+    tokio::task::spawn_blocking(move || {
+        // 1. 同步保存到配置文件
+        let mut app_config = crate::modules::config::load_app_config()
+            .map_err(|e| format!("Failed to load config: {}", e))?;
+        app_config.proxy.security_monitor = config_clone;
+        crate::modules::config::save_app_config(&app_config)
+            .map_err(|e| format!("Failed to save config: {}", e))
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     // 2. 更新内存中的配置 (如果服务正在运行)
     {
@@ -250,12 +298,13 @@ pub async fn update_security_config(
 #[tauri::command]
 pub async fn get_ip_token_stats(
     limit: Option<usize>,
-    hours: Option<i64>
+    hours: Option<i64>,
 ) -> Result<Vec<crate::modules::proxy_db::IpTokenStats>, String> {
-    crate::modules::proxy_db::get_token_usage_by_ip(
-        limit.unwrap_or(100),
-        hours.unwrap_or(720)
-    )
+    tokio::task::spawn_blocking(move || {
+        crate::modules::proxy_db::get_token_usage_by_ip(limit.unwrap_or(100), hours.unwrap_or(720))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 // ==================== 辅助函数 ====================
@@ -268,19 +317,19 @@ fn is_valid_ip_pattern(pattern: &str) -> bool {
         if parts.len() != 2 {
             return false;
         }
-        
+
         // 验证 IP 部分
         if !is_valid_ip(parts[0]) {
             return false;
         }
-        
+
         // 验证掩码部分
         if let Ok(mask) = parts[1].parse::<u8>() {
             return mask <= 32;
         }
         return false;
     }
-    
+
     // 单个 IP 地址
     is_valid_ip(pattern)
 }
@@ -291,7 +340,7 @@ fn is_valid_ip(ip: &str) -> bool {
     if parts.len() != 4 {
         return false;
     }
-    
+
     for part in parts {
         if let Ok(num) = part.parse::<u8>() {
             if num > 255 {
@@ -301,7 +350,7 @@ fn is_valid_ip(ip: &str) -> bool {
             return false;
         }
     }
-    
+
     true
 }
 

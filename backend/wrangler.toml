@@ -1,0 +1,14 @@
+name = "p16-backend"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+account_id = "e12dd07e3951d3a5683b89fefd58085b"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "topoo-id"
+database_id = "a7451f22-b50d-4f16-9429-01e2811ba58a"
+
+# Environment variables
+[vars]
+# Secrets are managed via `wrangler secret put`

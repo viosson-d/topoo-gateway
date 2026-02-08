@@ -76,8 +76,8 @@ const LogTable: React.FC<LogTableProps> = ({
     return (
         <div className="flex-1 overflow-auto bg-background/50">
             <Table>
-                <TableHeader className="bg-muted/50 sticky top-0 z-10 backdrop-blur-sm">
-                    <TableRow className="hover:bg-transparent border-b border-border/40 !h-7">
+                <TableHeader className="bg-muted/50 sticky top-0 z-10 backdrop-blur-sm border-t-0">
+                    <TableRow className="hover:bg-transparent border-b-0 !h-7">
                         <TableHead className="w-[80px] text-[10px] font-medium !h-7">{t('monitor.table.status')}</TableHead>
                         <TableHead className="w-[80px] text-[10px] font-medium !h-7">{t('monitor.table.method')}</TableHead>
                         <TableHead className="w-[200px] text-[10px] font-medium !h-7">{t('monitor.table.model')}</TableHead>
@@ -109,7 +109,7 @@ const LogTable: React.FC<LogTableProps> = ({
                         logs.map((log) => (
                             <TableRow
                                 key={log.id}
-                                className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/40 !h-8"
+                                className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/20 dark:border-zinc-800/30 !h-8"
                                 onClick={() => onLogClick(log)}
                             >
                                 <TableCell className="!py-0">
@@ -404,7 +404,7 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({
             className
         )}>
             {/* Toolbar */}
-            <div className="p-3 border-b flex flex-col gap-3 bg-muted/10">
+            <div className="p-3 border-b border-border/20 dark:border-zinc-800/30 flex flex-col gap-3 bg-muted/10">
                 <div className="flex items-center gap-3">
                     <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-2.5 top-2 text-muted-foreground h-4 w-4" />
@@ -502,7 +502,7 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({
             />
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20 text-xs">
+            <div className="flex items-center justify-between px-4 py-2 border-t border-border/20 dark:border-zinc-800/30 bg-muted/20 text-xs">
                 <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Rows per page</span>
                     <Select

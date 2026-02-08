@@ -132,8 +132,24 @@ pub fn record_usage(
     input_tokens: u32,
     output_tokens: u32,
 ) -> Result<(), String> {
+    record_usage_with_time(
+        account_email,
+        model,
+        input_tokens,
+        output_tokens,
+        chrono::Utc::now().timestamp(),
+    )
+}
+
+/// Record token usage with specific timestamp (for backfill/migration)
+pub fn record_usage_with_time(
+    account_email: &str,
+    model: &str,
+    input_tokens: u32,
+    output_tokens: u32,
+    timestamp: i64,
+) -> Result<(), String> {
     let conn = connect_db()?;
-    let timestamp = chrono::Utc::now().timestamp();
     let total_tokens = input_tokens + output_tokens;
 
     // Insert into raw usage table
@@ -143,7 +159,11 @@ pub fn record_usage(
         params![timestamp, account_email, model, input_tokens, output_tokens, total_tokens],
     ).map_err(|e| e.to_string())?;
 
-    let hour_bucket = chrono::Utc::now().format("%Y-%m-%d %H:00").to_string();
+    // Use the provided timestamp for bucket calculation
+    let dt =
+        chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0).ok_or("Invalid timestamp")?;
+    let hour_bucket = dt.format("%Y-%m-%d %H:00").to_string();
+
     conn.execute(
         "INSERT INTO token_stats_hourly (hour_bucket, account_email, total_input_tokens, total_output_tokens, total_tokens, request_count)
          VALUES (?1, ?2, ?3, ?4, ?5, 1)
@@ -156,6 +176,42 @@ pub fn record_usage(
     ).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+/// Rebuild token stats from proxy logs
+pub fn rebuild_from_logs() -> Result<usize, String> {
+    // 1. Clear existing stats
+    let conn = connect_db()?;
+    conn.execute("DELETE FROM token_usage", [])
+        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM token_stats_hourly", [])
+        .map_err(|e| e.to_string())?;
+
+    // 2. Get all logs from proxy_db
+    let logs = crate::modules::proxy_db::get_all_logs_for_export()?;
+    let mut count = 0;
+
+    // 3. Replay logs
+    for log in logs {
+        if let (Some(account), Some(input), Some(output)) =
+            (log.account_email, log.input_tokens, log.output_tokens)
+        {
+            // timestamp in logs is ms, convert to s
+            let timestamp = log.timestamp / 1000;
+            let model = log.model.unwrap_or_else(|| "unknown".to_string());
+
+            if let Err(e) = record_usage_with_time(&account, &model, input, output, timestamp) {
+                crate::modules::logger::log_warn(&format!(
+                    "Failed to re-record log {}: {}",
+                    log.id, e
+                ));
+            } else {
+                count += 1;
+            }
+        }
+    }
+
+    Ok(count)
 }
 
 /// Get hourly aggregated stats for a time range
@@ -389,8 +445,10 @@ pub fn get_model_stats(hours: i64) -> Result<Vec<ModelTokenStats>, String> {
 
 pub fn get_model_trend_hourly(hours: i64) -> Result<Vec<ModelTrendPoint>, String> {
     let conn = connect_db()?;
-    let cutoff = chrono::Utc::now().timestamp() - (hours * 3600);
+    let now = chrono::Utc::now();
+    let cutoff = now.timestamp() - (hours * 3600);
 
+    // Query database for hours with data
     let mut stmt = conn
         .prepare(
             "SELECT strftime('%Y-%m-%d %H:00', datetime(timestamp, 'unixepoch')) as hour_bucket,
@@ -421,16 +479,25 @@ pub fn get_model_trend_hourly(hours: i64) -> Result<Vec<ModelTrendPoint>, String
         trend_map.entry(period).or_default().insert(model, total);
     }
 
-    Ok(trend_map
-        .into_iter()
-        .map(|(period, model_data)| ModelTrendPoint { period, model_data })
-        .collect())
+    // Generate complete hour range (last `hours` hours)
+    let mut result = Vec::new();
+    for i in (0..hours).rev() {
+        let hour = now - chrono::Duration::hours(i);
+        let period = hour.format("%Y-%m-%d %H:00").to_string();
+
+        let model_data = trend_map.remove(&period).unwrap_or_default();
+        result.push(ModelTrendPoint { period, model_data });
+    }
+
+    Ok(result)
 }
 
 pub fn get_model_trend_minute(minutes: i64) -> Result<Vec<ModelTrendPoint>, String> {
     let conn = connect_db()?;
-    let cutoff = chrono::Utc::now().timestamp() - (minutes * 60);
+    let now = chrono::Utc::now();
+    let cutoff = now.timestamp() - (minutes * 60);
 
+    // Query database for minutes with data
     let mut stmt = conn
         .prepare(
             "SELECT strftime('%Y-%m-%d %H:%M', datetime(timestamp, 'unixepoch')) as minute_bucket,
@@ -461,16 +528,25 @@ pub fn get_model_trend_minute(minutes: i64) -> Result<Vec<ModelTrendPoint>, Stri
         trend_map.entry(period).or_default().insert(model, total);
     }
 
-    Ok(trend_map
-        .into_iter()
-        .map(|(period, model_data)| ModelTrendPoint { period, model_data })
-        .collect())
+    // Generate complete minute range (last `minutes` minutes)
+    let mut result = Vec::new();
+    for i in (0..minutes).rev() {
+        let minute = now - chrono::Duration::minutes(i);
+        let period = minute.format("%Y-%m-%d %H:%M").to_string();
+
+        let model_data = trend_map.remove(&period).unwrap_or_default();
+        result.push(ModelTrendPoint { period, model_data });
+    }
+
+    Ok(result)
 }
 
 pub fn get_model_trend_daily(days: i64) -> Result<Vec<ModelTrendPoint>, String> {
     let conn = connect_db()?;
-    let cutoff = chrono::Utc::now().timestamp() - (days * 24 * 3600);
+    let now = chrono::Utc::now();
+    let cutoff = now.timestamp() - (days * 24 * 3600);
 
+    // Query database for dates with data
     let mut stmt = conn
         .prepare(
             "SELECT strftime('%Y-%m-%d', datetime(timestamp, 'unixepoch')) as day_bucket,
@@ -501,10 +577,17 @@ pub fn get_model_trend_daily(days: i64) -> Result<Vec<ModelTrendPoint>, String> 
         trend_map.entry(period).or_default().insert(model, total);
     }
 
-    Ok(trend_map
-        .into_iter()
-        .map(|(period, model_data)| ModelTrendPoint { period, model_data })
-        .collect())
+    // Generate complete date range (last `days` days)
+    let mut result = Vec::new();
+    for i in (0..days).rev() {
+        let date = now - chrono::Duration::days(i);
+        let period = date.format("%Y-%m-%d").to_string();
+
+        let model_data = trend_map.remove(&period).unwrap_or_default();
+        result.push(ModelTrendPoint { period, model_data });
+    }
+
+    Ok(result)
 }
 
 pub fn get_account_trend_hourly(hours: i64) -> Result<Vec<AccountTrendPoint>, String> {

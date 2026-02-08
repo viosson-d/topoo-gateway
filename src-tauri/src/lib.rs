@@ -420,6 +420,15 @@ pub fn run() {
             commands::cloudflared::cloudflared_start,
             commands::cloudflared::cloudflared_stop,
             commands::cloudflared::cloudflared_get_status,
+            // User Token commands
+            commands::user_token::login_topoo_user,
+            commands::user_token::list_user_tokens,
+            commands::user_token::create_user_token,
+            commands::user_token::update_user_token,
+            commands::user_token::delete_user_token,
+            commands::user_token::renew_user_token,
+            commands::user_token::get_token_ip_bindings,
+            commands::user_token::get_user_token_summary,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

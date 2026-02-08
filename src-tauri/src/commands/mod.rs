@@ -883,7 +883,9 @@ pub use crate::modules::token_stats::{AccountTokenStats, TokenStatsAggregated, T
 
 #[tauri::command]
 pub async fn get_token_stats_hourly(hours: i64) -> Result<Vec<TokenStatsAggregated>, String> {
-    crate::modules::token_stats::get_hourly_stats(hours)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_hourly_stats(hours))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// 重置所有账号的 forbidden 状态
@@ -894,62 +896,93 @@ pub async fn reset_forbidden_accounts() -> Result<usize, String> {
 
 #[tauri::command]
 pub async fn get_token_stats_daily(days: i64) -> Result<Vec<TokenStatsAggregated>, String> {
-    crate::modules::token_stats::get_daily_stats(days)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_daily_stats(days))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_weekly(weeks: i64) -> Result<Vec<TokenStatsAggregated>, String> {
-    crate::modules::token_stats::get_weekly_stats(weeks)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_weekly_stats(weeks))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_by_account(hours: i64) -> Result<Vec<AccountTokenStats>, String> {
-    crate::modules::token_stats::get_account_stats(hours)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_account_stats(hours))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_summary(hours: i64) -> Result<TokenStatsSummary, String> {
-    crate::modules::token_stats::get_summary_stats(hours)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_summary_stats(hours))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_by_model(
     hours: i64,
 ) -> Result<Vec<crate::modules::token_stats::ModelTokenStats>, String> {
-    crate::modules::token_stats::get_model_stats(hours)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_model_stats(hours))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_model_trend_hourly(
     hours: i64,
 ) -> Result<Vec<crate::modules::token_stats::ModelTrendPoint>, String> {
-    crate::modules::token_stats::get_model_trend_hourly(hours)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_model_trend_hourly(hours))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_model_trend_minute(
     minutes: i64,
 ) -> Result<Vec<crate::modules::token_stats::ModelTrendPoint>, String> {
-    crate::modules::token_stats::get_model_trend_minute(minutes)
+    tokio::task::spawn_blocking(move || {
+        crate::modules::token_stats::get_model_trend_minute(minutes)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_model_trend_daily(
     days: i64,
 ) -> Result<Vec<crate::modules::token_stats::ModelTrendPoint>, String> {
-    crate::modules::token_stats::get_model_trend_daily(days)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_model_trend_daily(days))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_account_trend_hourly(
     hours: i64,
 ) -> Result<Vec<crate::modules::token_stats::AccountTrendPoint>, String> {
-    crate::modules::token_stats::get_account_trend_hourly(hours)
+    tokio::task::spawn_blocking(move || {
+        crate::modules::token_stats::get_account_trend_hourly(hours)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn get_token_stats_account_trend_daily(
     days: i64,
 ) -> Result<Vec<crate::modules::token_stats::AccountTrendPoint>, String> {
-    crate::modules::token_stats::get_account_trend_daily(days)
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::get_account_trend_daily(days))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn rebuild_token_stats() -> Result<usize, String> {
+    tokio::task::spawn_blocking(move || crate::modules::token_stats::rebuild_from_logs())
+        .await
+        .map_err(|e| e.to_string())?
 }

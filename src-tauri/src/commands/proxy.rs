@@ -399,59 +399,77 @@ pub async fn clear_proxy_logs(state: State<'_, ProxyServiceState>) -> Result<(),
 }
 
 /// 获取反代请求日志 (分页)
+/// 获取反代请求日志 (分页)
 #[tauri::command]
 pub async fn get_proxy_logs_paginated(
     limit: Option<usize>,
     offset: Option<usize>,
 ) -> Result<Vec<ProxyRequestLog>, String> {
-    crate::modules::proxy_db::get_logs_paginated(
-        limit.unwrap_or(20),
-        offset.unwrap_or(0),
-        true, // Include body for RecentActivity details
-    )
+    tokio::task::spawn_blocking(move || {
+        crate::modules::proxy_db::get_logs_paginated(
+            limit.unwrap_or(20),
+            offset.unwrap_or(0),
+            true, // Include body for RecentActivity details
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 获取单条日志的完整详情
 #[tauri::command]
 pub async fn get_proxy_log_detail(log_id: String) -> Result<ProxyRequestLog, String> {
-    crate::modules::proxy_db::get_log_detail(&log_id)
+    tokio::task::spawn_blocking(move || crate::modules::proxy_db::get_log_detail(&log_id))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// 获取日志总数
 #[tauri::command]
 pub async fn get_proxy_logs_count() -> Result<u64, String> {
-    crate::modules::proxy_db::get_logs_count()
+    tokio::task::spawn_blocking(|| crate::modules::proxy_db::get_logs_count())
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// 导出所有日志到指定文件
 #[tauri::command]
 pub async fn export_proxy_logs(file_path: String) -> Result<usize, String> {
-    let logs = crate::modules::proxy_db::get_all_logs_for_export()?;
-    let count = logs.len();
+    tokio::task::spawn_blocking(move || {
+        let logs = crate::modules::proxy_db::get_all_logs_for_export()?;
+        let count = logs.len();
 
-    let json = serde_json::to_string_pretty(&logs)
-        .map_err(|e| format!("Failed to serialize logs: {}", e))?;
+        let json = serde_json::to_string_pretty(&logs)
+            .map_err(|e| format!("Failed to serialize logs: {}", e))?;
 
-    std::fs::write(&file_path, json).map_err(|e| format!("Failed to write file: {}", e))?;
+        std::fs::write(&file_path, json).map_err(|e| format!("Failed to write file: {}", e))?;
 
-    Ok(count)
+        Ok(count)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 导出指定的日志JSON到文件
 #[tauri::command]
 pub async fn export_proxy_logs_json(file_path: String, json_data: String) -> Result<usize, String> {
-    // Parse to count items
-    let logs: Vec<serde_json::Value> =
-        serde_json::from_str(&json_data).map_err(|e| format!("Failed to parse JSON: {}", e))?;
-    let count = logs.len();
+    tokio::task::spawn_blocking(move || {
+        // Parse to count items
+        let logs: Vec<serde_json::Value> =
+            serde_json::from_str(&json_data).map_err(|e| format!("Failed to parse JSON: {}", e))?;
+        let count = logs.len();
 
-    // Pretty print
-    let pretty_json =
-        serde_json::to_string_pretty(&logs).map_err(|e| format!("Failed to serialize: {}", e))?;
+        // Pretty print
+        let pretty_json = serde_json::to_string_pretty(&logs)
+            .map_err(|e| format!("Failed to serialize: {}", e))?;
 
-    std::fs::write(&file_path, pretty_json).map_err(|e| format!("Failed to write file: {}", e))?;
+        std::fs::write(&file_path, pretty_json)
+            .map_err(|e| format!("Failed to write file: {}", e))?;
 
-    Ok(count)
+        Ok(count)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 获取带搜索条件的日志数量
@@ -460,7 +478,11 @@ pub async fn get_proxy_logs_count_filtered(
     filter: String,
     errors_only: bool,
 ) -> Result<u64, String> {
-    crate::modules::proxy_db::get_logs_count_filtered(&filter, errors_only)
+    tokio::task::spawn_blocking(move || {
+        crate::modules::proxy_db::get_logs_count_filtered(&filter, errors_only)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 获取带搜索条件的分页日志
@@ -471,7 +493,11 @@ pub async fn get_proxy_logs_filtered(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<crate::proxy::monitor::ProxyRequestLog>, String> {
-    crate::modules::proxy_db::get_logs_filtered(&filter, errors_only, limit, offset)
+    tokio::task::spawn_blocking(move || {
+        crate::modules::proxy_db::get_logs_filtered(&filter, errors_only, limit, offset)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 生成 API Key
