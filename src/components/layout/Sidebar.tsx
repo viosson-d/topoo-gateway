@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { getAppVersionDisplay } from '../../utils/version';
 import { Button } from '../ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { motion, LayoutGroup } from 'framer-motion';
@@ -41,7 +42,7 @@ export function Sidebar({ className }: { className?: string }) {
                         </div>
                         <div className="min-w-0 flex flex-col justify-center">
                             <h2 className="font-semibold text-sm leading-none text-foreground tracking-tight force-no-transform" style={{ textTransform: 'none' }}>topoo Gateway</h2>
-                            <p className="text-[11px] text-muted-foreground/80 leading-tight mt-0.5"><span className="text-muted-foreground/50 text-[10px]">v0.0.125</span></p>
+                            <p className="text-[11px] text-muted-foreground/80 leading-tight mt-0.5"><span className="text-muted-foreground/50 text-[10px]">{getAppVersionDisplay()}</span></p>
                         </div>
                     </div>
                 </div>

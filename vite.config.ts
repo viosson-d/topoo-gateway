@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 const host = process.env.TAURI_DEV_HOST;
 
 import path from "path";
+import pkg from "./package.json";
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
@@ -13,6 +14,11 @@ export default defineConfig(async () => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+
+  // Inject version from package.json
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
