@@ -136,10 +136,10 @@ response = client.images.generate(
 - **数据库**: SQLite
 - **协议**: OpenAI API / Anthropic API / Gemini API
 
-## 📄 许可证
+## 📄 License
 
-本项目基于 Antigravity Manager 开发。
+Based on Antigravity Manager.
 
 ---
 
-**Star ⭐ 本项目以支持开发!**
+**Star ⭐ this project to support development!**
