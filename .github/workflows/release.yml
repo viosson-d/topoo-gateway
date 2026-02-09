@@ -57,9 +57,9 @@ jobs:
           cd src-tauri/target/universal-apple-darwin/release/bundle/macos/ || cd src-tauri/target/release/bundle/macos/
           
           # 重命名 .app.tar.gz 和 .sig
-          if [ -f "Antigravity Tools.app.tar.gz" ]; then
-            mv "Antigravity Tools.app.tar.gz" "Antigravity Tools_${ARCH}.app.tar.gz"
-            mv "Antigravity Tools.app.tar.gz.sig" "Antigravity Tools_${ARCH}.app.tar.gz.sig"
+          if [ -f "Topoo Gateway.app.tar.gz" ]; then
+            mv "Topoo Gateway.app.tar.gz" "Topoo Gateway_${ARCH}.app.tar.gz"
+            mv "Topoo Gateway.app.tar.gz.sig" "Topoo Gateway_${ARCH}.app.tar.gz.sig"
             echo "Renamed assets to append Arch: $ARCH"
           fi
           
@@ -72,7 +72,7 @@ jobs:
           if [ -f "$UPDATER_JSON" ]; then
             echo "Updating $UPDATER_JSON to use renamed assets..."
             # 使用 sed 替换文件名
-            sed -i '' "s/Antigravity%20Tools.app.tar.gz/Antigravity%20Tools_${ARCH}.app.tar.gz/g" "$UPDATER_JSON"
+            sed -i '' "s/Topoo%20Gateway.app.tar.gz/Topoo%20Gateway_${ARCH}.app.tar.gz/g" "$UPDATER_JSON"
             
             # 准备上传
             mkdir -p ../../../../../updater_upload
