@@ -44,7 +44,33 @@ interface UserState {
     submitAccessRequest: (email: string, reason: string) => Promise<void>;
 }
 
-export const BACKEND_URL = 'https://p16-backend.wissen-damon.workers.dev';
+// Backend URL configuration with environment awareness
+const getBackendUrl = (): string => {
+    // Priority 1: Environment variable (for development/testing)
+    if (import.meta.env.VITE_BACKEND_URL) {
+        return import.meta.env.VITE_BACKEND_URL;
+    }
+
+    // Priority 2: Production default (Cloudflare Workers)
+    return 'https://p16-backend.wissen-damon.workers.dev';
+};
+
+export const BACKEND_URL = getBackendUrl();
+
+// Helper function to check if backend is reachable
+const checkBackendHealth = async (): Promise<boolean> => {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(5000), // 5 second timeout
+        });
+        return response.status !== 0; // Any response means server is reachable
+    } catch (error) {
+        console.error('[Backend Health Check] Failed:', error);
+        return false;
+    }
+};
+
 
 export const useUserStore = create<UserState>()(
     persist(
@@ -82,9 +108,11 @@ export const useUserStore = create<UserState>()(
             login: async (inviteCode?: string) => {
                 set({ isLoading: true, error: null });
                 try {
-                    console.log('Starting Google login flow...');
+                    console.log('[Login] Starting Google login flow...');
+                    console.log('[Login] Backend URL:', BACKEND_URL);
+
                     const response = await invoke('login_topoo_user');
-                    console.log('Rust login response:', response);
+                    console.log('[Login] Rust login response received');
 
                     // @ts-ignore
                     const { id_token } = response;
@@ -98,6 +126,7 @@ export const useUserStore = create<UserState>()(
                         payload.invite_code = inviteCode;
                     }
 
+                    console.log('[Login] Sending registration request to backend...');
                     const authResponse = await fetch(`${BACKEND_URL}/api/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +135,7 @@ export const useUserStore = create<UserState>()(
 
                     if (!authResponse.ok) {
                         const errorData = await authResponse.json().catch(() => ({}));
-                        console.error('Backend registration failed:', authResponse.status, errorData);
+                        console.error('[Login] Backend registration failed:', authResponse.status, errorData);
 
                         if (authResponse.status === 403 && (errorData.error === 'INVITE_REQUIRED' || errorData.error === 'INVALID_INVITE_CODE')) {
                             // Re-throw specific error text to be caught by UI
@@ -116,6 +145,8 @@ export const useUserStore = create<UserState>()(
                     }
 
                     const authData = await authResponse.json() as { token: string, user: GlobalUser };
+                    console.log('[Login] Registration successful');
+
                     set({
                         user: authData.user,
                         token: authData.token,
@@ -126,8 +157,25 @@ export const useUserStore = create<UserState>()(
                     await get().fetchQuota();
 
                 } catch (error: any) {
-                    console.error('Google Login failed:', error);
-                    let errorMessage = typeof error === 'string' ? error : error.message || 'Login failed';
+                    console.error('[Login] Failed:', error);
+
+                    // Enhanced error diagnostics
+                    let errorMessage = 'Login failed';
+
+                    if (error.message === 'INVITE_REQUIRED' || error.message === 'INVALID_INVITE_CODE') {
+                        errorMessage = error.message;
+                    } else if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+                        // Network error - check backend health
+                        const isHealthy = await checkBackendHealth();
+                        if (!isHealthy) {
+                            errorMessage = `Cannot connect to backend (${BACKEND_URL}). Please check your network connection.`;
+                        } else {
+                            errorMessage = 'Network request failed. This may be a CORS or CSP issue.';
+                        }
+                    } else {
+                        errorMessage = error.message || 'Login failed';
+                    }
+
                     set({ error: errorMessage, isLoading: false });
                     throw new Error(errorMessage);
                 }
@@ -136,6 +184,7 @@ export const useUserStore = create<UserState>()(
             loginWithEmail: async (email, password) => {
                 set({ isLoading: true, error: null });
                 try {
+                    console.log('[Email Login] Attempting login...');
                     const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -158,15 +207,27 @@ export const useUserStore = create<UserState>()(
                     await get().fetchQuota();
 
                 } catch (error: any) {
-                    console.error('Email Login failed:', error);
-                    set({ error: error.message, isLoading: false });
-                    throw error;
+                    console.error('[Email Login] Failed:', error);
+
+                    let errorMessage = 'Login failed';
+                    if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+                        const isHealthy = await checkBackendHealth();
+                        errorMessage = isHealthy
+                            ? 'Network request failed. This may be a CORS or CSP issue.'
+                            : `Cannot connect to backend (${BACKEND_URL}). Please check your network connection.`;
+                    } else {
+                        errorMessage = error.message || 'Login failed';
+                    }
+
+                    set({ error: errorMessage, isLoading: false });
+                    throw new Error(errorMessage);
                 }
             },
 
             registerWithEmail: async (email, password, inviteCode) => {
                 set({ isLoading: true, error: null });
                 try {
+                    console.log('[Email Registration] Attempting registration...');
                     const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -175,6 +236,11 @@ export const useUserStore = create<UserState>()(
 
                     if (!response.ok) {
                         const data = await response.json().catch(() => ({}));
+
+                        if (response.status === 403 && (data.error === 'INVITE_REQUIRED' || data.error === 'INVALID_INVITE_CODE')) {
+                            throw new Error(data.error);
+                        }
+
                         throw new Error(data.error || 'Registration failed');
                     }
 
@@ -189,9 +255,22 @@ export const useUserStore = create<UserState>()(
                     await get().fetchQuota();
 
                 } catch (error: any) {
-                    console.error('Registration failed:', error);
-                    set({ error: error.message, isLoading: false });
-                    throw error;
+                    console.error('[Email Registration] Failed:', error);
+
+                    let errorMessage = 'Registration failed';
+                    if (error.message === 'INVITE_REQUIRED' || error.message === 'INVALID_INVITE_CODE') {
+                        errorMessage = error.message;
+                    } else if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+                        const isHealthy = await checkBackendHealth();
+                        errorMessage = isHealthy
+                            ? 'Network request failed. This may be a CORS or CSP issue.'
+                            : `Cannot connect to backend (${BACKEND_URL}). Please check your network connection.`;
+                    } else {
+                        errorMessage = error.message || 'Registration failed';
+                    }
+
+                    set({ error: errorMessage, isLoading: false });
+                    throw new Error(errorMessage);
                 }
             },
 
