@@ -3,7 +3,7 @@
 > Personal AI Account Management & API Gateway
 
 <div align="center">
-  <img src="public/icon.png" alt="Topoo Gateway Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+  <img src="public/topoo.png" alt="Topoo Gateway Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
 
   <h3>Your Personal AI Gateway</h3>
   <p>Multi-Account Management · Protocol Conversion · Smart Routing</p>

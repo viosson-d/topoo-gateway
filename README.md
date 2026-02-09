@@ -3,7 +3,7 @@
 > 个人 AI 账号管理与 API 网关工具
 
 <div align="center">
-  <img src="public/icon.png" alt="Topoo Gateway Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+  <img src="public/topoo.png" alt="Topoo Gateway Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
 
   <h3>您的个人 AI 调度网关</h3>
   <p>多账号管理 · 协议转换 · 智能调度</p>
